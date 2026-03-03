@@ -10,7 +10,10 @@ engine: copilot
 permissions:
   contents: read
 
-network: defaults
+network:
+  allowed:
+    - defaults
+    - api.telegram.org
 
 tools:
   bash: true
