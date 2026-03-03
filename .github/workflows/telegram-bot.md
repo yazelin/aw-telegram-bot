@@ -44,17 +44,19 @@ safe-inputs:
         required: true
         description: "The message text to send"
     script: |
-      const res = await fetch(
-        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ chat_id: chat_id, text: text }),
-        }
-      );
+      const token = process.env.TELEGRAM_BOT_TOKEN;
+      console.log(`Token present: ${!!token}, length: ${token ? token.length : 0}`);
+      const url = `https://api.telegram.org/bot${token}/sendMessage`;
+      console.log(`Sending to chat_id: ${chat_id}`);
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chat_id, text: text }),
+      });
       const data = await res.json();
+      console.log(`Telegram response: ${JSON.stringify(data)}`);
       if (!data.ok) throw new Error(`Telegram API error: ${JSON.stringify(data)}`);
-      return data;
+      return JSON.stringify(data);
     env:
       TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
 

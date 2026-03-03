@@ -24,7 +24,7 @@
 # Telegram chatbot powered by Copilot. Receives messages via workflow_dispatch
 # from Cloudflare Worker relay, generates a response, and replies via Telegram API.
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"2fd08495ae843bf7e9ff8de00d50f8a42e1c270fc98d1345d0907caf38690e54","compiler_version":"v0.51.8"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"679abb549f80fec75d6289149fd641bad94e5fd0a06b66dd73ca97d73b402c8b","compiler_version":"v0.51.8"}
 
 name: "Telegram Chatbot"
 "on":
@@ -362,17 +362,19 @@ jobs:
           cat > /opt/gh-aw/safe-inputs/send-telegram-message.cjs << 'GH_AW_SAFE_INPUTS_JS_SEND-TELEGRAM-MESSAGE_EOF'
             async function execute(inputs) {
               const { chat_id, text } = inputs || {};
-              const res = await fetch(
-                `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ chat_id: chat_id, text: text }),
-                }
-              );
+              const token = process.env.TELEGRAM_BOT_TOKEN;
+              console.log(`Token present: ${!!token}, length: ${token ? token.length : 0}`);
+              const url = `https://api.telegram.org/bot${token}/sendMessage`;
+              console.log(`Sending to chat_id: ${chat_id}`);
+              const res = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ chat_id: chat_id, text: text }),
+              });
               const data = await res.json();
+              console.log(`Telegram response: ${JSON.stringify(data)}`);
               if (!data.ok) throw new Error(`Telegram API error: ${JSON.stringify(data)}`);
-              return data;
+              return JSON.stringify(data);
             }
             module.exports = { execute };
           GH_AW_SAFE_INPUTS_JS_SEND-TELEGRAM-MESSAGE_EOF
