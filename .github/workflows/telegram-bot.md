@@ -43,20 +43,20 @@ safe-inputs:
         type: string
         required: true
         description: "The message text to send"
-    script: |
-      const token = process.env.TELEGRAM_BOT_TOKEN;
-      console.log(`Token present: ${!!token}, length: ${token ? token.length : 0}`);
-      const url = `https://api.telegram.org/bot${token}/sendMessage`;
-      console.log(`Sending to chat_id: ${chat_id}`);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chat_id, text: text }),
-      });
-      const data = await res.json();
-      console.log(`Telegram response: ${JSON.stringify(data)}`);
-      if (!data.ok) throw new Error(`Telegram API error: ${JSON.stringify(data)}`);
-      return JSON.stringify(data);
+    py: |
+      import os, json, urllib.request, sys
+      token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+      print(f"Token present: {bool(token)}, length: {len(token)}", file=sys.stderr)
+      chat_id_val = inputs.get("chat_id", "")
+      text_val = inputs.get("text", "")
+      print(f"chat_id: {chat_id_val}", file=sys.stderr)
+      url = f"https://api.telegram.org/bot{token}/sendMessage"
+      payload = json.dumps({"chat_id": chat_id_val, "text": text_val}).encode()
+      req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
+      resp = urllib.request.urlopen(req)
+      data = json.loads(resp.read())
+      print(f"Telegram response: {json.dumps(data)}", file=sys.stderr)
+      print(json.dumps({"ok": True, "message_id": data.get("result", {}).get("message_id")}))
     env:
       TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
 
