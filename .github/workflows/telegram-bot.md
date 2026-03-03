@@ -16,6 +16,10 @@ on:
         description: "Telegram username"
         required: false
 
+concurrency:
+  group: "gh-aw-${{ github.workflow }}-${{ github.event.inputs.chat_id }}"
+  cancel-in-progress: false
+
 engine:
   id: copilot
   model: gpt-5.3-codex
@@ -193,8 +197,8 @@ Use this when the user asks to translate text.
 
 ## General guidelines
 
+- Always respond in Traditional Chinese (繁體中文) unless the user writes in another language
 - Keep text responses under 4096 characters (Telegram limit)
 - For image requests, write detailed prompts in English for better quality
-- Respond in the same language the user writes in
 - If you don't know something, say so honestly
 - When auto-judging mode: if unsure, default to a helpful text reply
