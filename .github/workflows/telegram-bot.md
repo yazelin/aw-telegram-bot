@@ -34,8 +34,9 @@ tools:
 
 mcp-servers:
   nanobanana:
-    command: uvx
-    args: [nanobanana-py]
+    container: ghcr.io/astral-sh/uv:python3.12-alpine
+    args: [-v, /tmp:/tmp:rw]
+    entrypointArgs: [uvx, nanobanana-py]
     env:
       NANOBANANA_GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"
       NANOBANANA_OUTPUT_DIR: "/tmp/nanobanana-output"
