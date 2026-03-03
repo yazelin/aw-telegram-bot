@@ -1,11 +1,24 @@
 ---
 description: |
-  Telegram chatbot powered by Copilot. Receives messages via repository_dispatch
+  Telegram chatbot powered by Copilot. Receives messages via workflow_dispatch
   from Cloudflare Worker relay, generates a response, and replies via Telegram API.
 
-on: api dispatch telegram_message
+on:
+  workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "Telegram chat ID"
+        required: true
+      text:
+        description: "Message text"
+        required: true
+      username:
+        description: "Telegram username"
+        required: false
 
-engine: copilot
+engine:
+  id: copilot
+  model: gpt-5.3-codex
 
 permissions:
   contents: read
@@ -16,7 +29,6 @@ network:
     - api.telegram.org
 
 tools:
-  bash: true
   web-fetch:
 
 secrets:
@@ -29,26 +41,19 @@ timeout-minutes: 5
 
 You are a helpful, friendly AI assistant responding to a Telegram message.
 
-## Step 1: Read the message
+## Message
 
-Use bash to read the event payload:
+- **Chat ID**: ${{ github.event.inputs.chat_id }}
+- **Username**: ${{ github.event.inputs.username }}
+- **Message**: ${{ github.event.inputs.text }}
 
-```bash
-cat $GITHUB_EVENT_PATH
-```
+## Instructions
 
-The JSON contains a `client_payload` object with:
-- `chat_id` — the Telegram chat ID to reply to
-- `text` — the user's message
-- `username` — the user's Telegram username
+1. Read the user's message above.
+2. Generate a helpful, concise response.
+3. Send your response back via the Telegram Bot API.
 
-## Step 2: Generate a response
-
-Think about the user's message and compose a helpful, concise reply.
-
-## Step 3: Send the reply
-
-Use the `web-fetch` tool to POST to the Telegram Bot API:
+Use the `web-fetch` tool to POST to:
 
 ```
 https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/sendMessage
@@ -58,7 +63,7 @@ With this JSON body:
 
 ```json
 {
-  "chat_id": <chat_id from payload>,
+  "chat_id": <Chat ID from above>,
   "text": "<your response>",
   "parse_mode": "HTML"
 }

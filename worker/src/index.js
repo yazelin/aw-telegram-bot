@@ -45,9 +45,10 @@ async function handleWebhook(request, env, ctx) {
 
 async function dispatchToGitHub(update, env) {
   const msg = update.message;
+  const workflowFile = "telegram-bot.lock.yml";
 
   const response = await fetch(
-    `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/dispatches`,
+    `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/actions/workflows/${workflowFile}/dispatches`,
     {
       method: "POST",
       headers: {
@@ -57,12 +58,11 @@ async function dispatchToGitHub(update, env) {
         "User-Agent": "aw-telegram-bot",
       },
       body: JSON.stringify({
-        event_type: "telegram_message",
-        client_payload: {
-          chat_id: msg.chat.id,
+        ref: "main",
+        inputs: {
+          chat_id: String(msg.chat.id),
           text: msg.text,
           username: msg.from?.username || "",
-          message_id: msg.message_id,
         },
       }),
     }
