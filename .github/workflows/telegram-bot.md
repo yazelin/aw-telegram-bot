@@ -33,6 +33,7 @@ network:
     - api.telegram.org
     - generativelanguage.googleapis.com
     - mcp.tavily.com
+    - github.com
 
 tools:
   web-fetch:
@@ -204,10 +205,246 @@ safe-inputs:
       TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
     timeout: 120
 
+  create-repo:
+    description: "Create a new GitHub repository"
+    inputs:
+      owner:
+        type: string
+        required: true
+        description: "Repository owner (e.g. yazelin)"
+      name:
+        type: string
+        required: true
+        description: "Repository name (e.g. minesweeper-web)"
+      repo_description:
+        type: string
+        required: true
+        description: "Short description for the repository"
+    py: |
+      import subprocess, sys, os, json
+      owner = inputs.get("owner", "")
+      name = inputs.get("name", "")
+      desc = inputs.get("repo_description", "")
+      repo = f"{owner}/{name}"
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "create_repo.py")
+      result = subprocess.run(
+          [sys.executable, script, repo, desc],
+          capture_output=True, text=True, timeout=60,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+    timeout: 60
+
+  setup-repo:
+    description: "Push initial files to a repository"
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: "Repository full name (e.g. yazelin/minesweeper-web)"
+      files_json:
+        type: string
+        required: true
+        description: "JSON array of {path, content} objects to push"
+    py: |
+      import subprocess, sys, os, json
+      repo = inputs.get("repo", "")
+      files_json = inputs.get("files_json", "[]")
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "setup_repo.py")
+      result = subprocess.run(
+          [sys.executable, script, repo, files_json],
+          capture_output=True, text=True, timeout=120,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+    timeout: 120
+
+  create-issues:
+    description: "Create multiple issues in a repository"
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: "Repository full name (e.g. yazelin/minesweeper-web)"
+      issues_json:
+        type: string
+        required: true
+        description: "JSON array of {title, body} objects"
+    py: |
+      import subprocess, sys, os, json
+      repo = inputs.get("repo", "")
+      issues_json = inputs.get("issues_json", "[]")
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "create_issues.py")
+      result = subprocess.run(
+          [sys.executable, script, repo, issues_json],
+          capture_output=True, text=True, timeout=120,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+    timeout: 120
+
+  setup-secrets:
+    description: "Set secrets on a repository"
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: "Repository full name"
+      secrets_json:
+        type: string
+        required: true
+        description: "JSON array of {name, value} objects"
+    py: |
+      import subprocess, sys, os, json
+      repo = inputs.get("repo", "")
+      secrets_json = inputs.get("secrets_json", "[]")
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "setup_secrets.py")
+      result = subprocess.run(
+          [sys.executable, script, repo, secrets_json],
+          capture_output=True, text=True, timeout=60,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+      APP_ID_VALUE: "${{ secrets.APP_ID }}"
+      APP_PRIVATE_KEY_VALUE: "${{ secrets.APP_PRIVATE_KEY }}"
+    timeout: 60
+
+  trigger-workflow:
+    description: "Trigger a workflow in a repository"
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: "Repository full name"
+      workflow:
+        type: string
+        required: true
+        description: "Workflow filename (e.g. implement.yml)"
+    py: |
+      import subprocess, sys, os, json
+      repo = inputs.get("repo", "")
+      workflow = inputs.get("workflow", "")
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "trigger_workflow.py")
+      result = subprocess.run(
+          [sys.executable, script, repo, workflow],
+          capture_output=True, text=True, timeout=30,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+    timeout: 30
+
+  post-comment:
+    description: "Post a comment on an issue or PR in any repo"
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: "Repository full name"
+      number:
+        type: string
+        required: true
+        description: "Issue or PR number"
+      body:
+        type: string
+        required: true
+        description: "Comment body text"
+    py: |
+      import subprocess, sys, os, json
+      repo = inputs.get("repo", "")
+      number = inputs.get("number", "")
+      body = inputs.get("body", "")
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "post_comment.py")
+      result = subprocess.run(
+          [sys.executable, script, repo, number, body],
+          capture_output=True, text=True, timeout=30,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+    timeout: 30
+
+  manage-labels:
+    description: "Add or remove a label on an issue or PR"
+    inputs:
+      repo:
+        type: string
+        required: true
+        description: "Repository full name"
+      number:
+        type: string
+        required: true
+        description: "Issue or PR number"
+      action:
+        type: string
+        required: true
+        description: "'add' or 'remove'"
+      label:
+        type: string
+        required: true
+        description: "Label name"
+    py: |
+      import subprocess, sys, os, json
+      repo = inputs.get("repo", "")
+      number = inputs.get("number", "")
+      action = inputs.get("action", "")
+      label = inputs.get("label", "")
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "manage_labels.py")
+      result = subprocess.run(
+          [sys.executable, script, repo, number, action, label],
+          capture_output=True, text=True, timeout=30,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+    timeout: 30
+
 secrets:
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+  FACTORY_PAT: ${{ secrets.FACTORY_PAT }}
+  APP_ID: ${{ secrets.APP_ID }}
+  APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
 
 timeout-minutes: 15
 ---
