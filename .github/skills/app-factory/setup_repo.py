@@ -8,7 +8,7 @@ Output: JSON to stdout
   Success: {"ok": true, "files_pushed": 5}
   Failure: {"ok": false, "error": "..."}
 """
-import json, os, subprocess, sys, tempfile
+import json, os, subprocess, sys, tempfile, time
 
 def main():
     if len(sys.argv) < 3:
@@ -19,13 +19,19 @@ def main():
     files = json.loads(sys.argv[2])
 
     with tempfile.TemporaryDirectory() as tmpdir:
-        # Clone the empty repo
-        result = subprocess.run(
-            ["gh", "repo", "clone", repo, tmpdir, "--", "--depth=1"],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            print(json.dumps({"ok": False, "error": f"Clone failed: {result.stderr.strip()[-300:]}"}))
+        # Clone the empty repo (retry for newly created repos that aren't ready yet)
+        max_attempts = 3
+        for attempt in range(1, max_attempts + 1):
+            result = subprocess.run(
+                ["gh", "repo", "clone", repo, tmpdir, "--", "--depth=1"],
+                capture_output=True, text=True
+            )
+            if result.returncode == 0:
+                break
+            if attempt < max_attempts:
+                time.sleep(5)
+        else:
+            print(json.dumps({"ok": False, "error": f"Clone failed after {max_attempts} attempts: {result.stderr.strip()[-300:]}"}))
             sys.exit(1)
 
         # Write files
