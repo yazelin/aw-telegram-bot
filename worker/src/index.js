@@ -7,6 +7,10 @@ export default {
     }
 
     if (url.pathname === "/register") {
+      const token = url.searchParams.get("token");
+      if (token !== env.TELEGRAM_SECRET) {
+        return new Response("Unauthorized", { status: 403 });
+      }
       return registerWebhook(url, env);
     }
 
@@ -21,7 +25,12 @@ async function handleWebhook(request, env, ctx) {
     return new Response("Unauthorized", { status: 403 });
   }
 
-  const update = await request.json();
+  let update;
+  try {
+    update = await request.json();
+  } catch {
+    return new Response("Bad Request", { status: 400 });
+  }
 
   // Only process text messages
   if (!update.message?.text) {
@@ -66,22 +75,29 @@ async function dispatchToGitHub(update, env) {
 
 async function registerWebhook(requestUrl, env) {
   const webhookUrl = `${requestUrl.protocol}//${requestUrl.hostname}/webhook`;
-  const result = await fetch(
-    `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/setWebhook`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        url: webhookUrl,
-        secret_token: env.TELEGRAM_SECRET,
-        allowed_updates: ["message"],
-        drop_pending_updates: true,
-      }),
-    }
-  );
+  try {
+    const result = await fetch(
+      `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/setWebhook`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          url: webhookUrl,
+          secret_token: env.TELEGRAM_SECRET,
+          allowed_updates: ["message"],
+          drop_pending_updates: true,
+        }),
+      }
+    );
 
-  const json = await result.json();
-  return new Response(JSON.stringify(json, null, 2), {
-    headers: { "Content-Type": "application/json" },
-  });
+    const json = await result.json();
+    return new Response(JSON.stringify(json, null, 2), {
+      headers: { "Content-Type": "application/json" },
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), {
+      status: 502,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
 }
