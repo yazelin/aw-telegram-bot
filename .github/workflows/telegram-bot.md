@@ -40,6 +40,10 @@ mcp-servers:
     env:
       NANOBANANA_GEMINI_API_KEY: "${{ secrets.GEMINI_API_KEY }}"
       NANOBANANA_OUTPUT_DIR: "/tmp/nanobanana-output"
+      NANOBANANA_MODEL: "gemini-3-pro-image-preview"
+      NANOBANANA_FALLBACK_MODELS: "gemini-2.5-flash-image,gemini-3.1-flash-image-preview"
+      NANOBANANA_TIMEOUT: "120"
+      NANOBANANA_DEBUG: "1"
     allowed: [generate_image]
 
 safe-inputs:
