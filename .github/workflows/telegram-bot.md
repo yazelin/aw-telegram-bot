@@ -121,6 +121,86 @@ safe-inputs:
       TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
     timeout: 120
 
+  download-video:
+    description: "Download a video from a URL using yt-dlp (360p, no ffmpeg)"
+    inputs:
+      url:
+        type: string
+        required: true
+        description: "The video URL to download (YouTube, Twitter, etc.)"
+    py: |
+      import subprocess, sys, os, json
+      url_val = inputs.get("url", "")
+      if not url_val:
+          print(json.dumps({"ok": False, "error": "No URL provided"}))
+          raise SystemExit(1)
+      # Install yt-dlp
+      subprocess.check_call(
+          [sys.executable, "-m", "pip", "install", "-q", "yt-dlp"],
+          stdout=subprocess.DEVNULL
+      )
+      # Run skill script
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "yt-dlp", "download.py")
+      result = subprocess.run(
+          [sys.executable, script, url_val],
+          capture_output=True, text=True, timeout=240
+      )
+      if result.returncode != 0:
+          error = result.stderr.strip()[-300:] if result.stderr else "Download failed"
+          print(json.dumps({"ok": False, "error": error}))
+      else:
+          print(result.stdout)
+    timeout: 300
+
+  send-telegram-video:
+    description: "Send a video file to a Telegram chat"
+    inputs:
+      chat_id:
+        type: string
+        required: true
+        description: "The Telegram chat ID to send the video to"
+      video_path:
+        type: string
+        required: true
+        description: "Absolute file path of the video to send"
+      caption:
+        type: string
+        required: false
+        description: "Optional caption for the video"
+    py: |
+      import os, json, urllib.request
+      token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+      chat_id_val = inputs.get("chat_id", "")
+      video_path = inputs.get("video_path", "")
+      caption = inputs.get("caption", "")
+      if not os.path.exists(video_path):
+          print(json.dumps({"ok": False, "error": f"File not found: {video_path}"}))
+          raise SystemExit(1)
+      filesize = os.path.getsize(video_path)
+      if filesize > 50 * 1024 * 1024:
+          print(json.dumps({"ok": False, "error": f"File too large: {filesize} bytes (max 50MB)"}))
+          raise SystemExit(1)
+      boundary = "----YtDlpUpload"
+      body = b""
+      body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{chat_id_val}\r\n".encode()
+      if caption:
+          body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{caption}\r\n".encode()
+      with open(video_path, "rb") as f:
+          video_data = f.read()
+      filename = os.path.basename(video_path)
+      body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"video\"; filename=\"{filename}\"\r\nContent-Type: video/mp4\r\n\r\n".encode()
+      body += video_data
+      body += f"\r\n--{boundary}--\r\n".encode()
+      url = f"https://api.telegram.org/bot{token}/sendVideo"
+      req = urllib.request.Request(url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+      resp = urllib.request.urlopen(req, timeout=120)
+      data = json.loads(resp.read())
+      print(json.dumps({"ok": True, "message_id": data.get("result", {}).get("message_id")}))
+    env:
+      TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+    timeout: 120
+
 secrets:
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}

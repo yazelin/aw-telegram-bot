@@ -24,7 +24,7 @@
 # Telegram chatbot powered by Copilot. Receives messages via workflow_dispatch
 # from Cloudflare Worker relay, generates a response, and replies via Telegram API.
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"f6bf9e6fe308c05df23fa8fa3ee0eb8392a7d7cc6c5f2e995dd5b31887939281","compiler_version":"v0.51.8"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"c092507d50cfdfb88cb36d101210d6e55219068bfcb9c47cc26298a03774aa93","compiler_version":"v0.51.8"}
 
 name: "Telegram Chatbot"
 "on":
@@ -313,6 +313,24 @@ jobs:
             "logDir": "/opt/gh-aw/safe-inputs/logs",
             "tools": [
               {
+                "name": "download-video",
+                "description": "Download a video from a URL using yt-dlp (360p, no ffmpeg)",
+                "inputSchema": {
+                  "properties": {
+                    "url": {
+                      "description": "The video URL to download (YouTube, Twitter, etc.)",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "url"
+                  ],
+                  "type": "object"
+                },
+                "handler": "download-video.py",
+                "timeout": 300
+              },
+              {
                 "name": "send-telegram-message",
                 "description": "Send a text message to a Telegram chat",
                 "inputSchema": {
@@ -367,6 +385,36 @@ jobs:
                   "TELEGRAM_BOT_TOKEN": "TELEGRAM_BOT_TOKEN"
                 },
                 "timeout": 120
+              },
+              {
+                "name": "send-telegram-video",
+                "description": "Send a video file to a Telegram chat",
+                "inputSchema": {
+                  "properties": {
+                    "caption": {
+                      "description": "Optional caption for the video",
+                      "type": "string"
+                    },
+                    "chat_id": {
+                      "description": "The Telegram chat ID to send the video to",
+                      "type": "string"
+                    },
+                    "video_path": {
+                      "description": "Absolute file path of the video to send",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "chat_id",
+                    "video_path"
+                  ],
+                  "type": "object"
+                },
+                "handler": "send-telegram-video.py",
+                "env": {
+                  "TELEGRAM_BOT_TOKEN": "TELEGRAM_BOT_TOKEN"
+                },
+                "timeout": 120
               }
             ]
           }
@@ -390,6 +438,51 @@ jobs:
           
       - name: Setup Safe Inputs Tool Files
         run: |
+          cat > /opt/gh-aw/safe-inputs/download-video.py << 'GH_AW_SAFE_INPUTS_PY_DOWNLOAD-VIDEO_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: download-video
+          # Download a video from a URL using yt-dlp (360p, no ffmpeg)
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # url = inputs.get('url')  # The video URL to download (YouTube, Twitter, etc.)
+          
+          # User code:
+          import subprocess, sys, os, json
+          url_val = inputs.get("url", "")
+          if not url_val:
+              print(json.dumps({"ok": False, "error": "No URL provided"}))
+              raise SystemExit(1)
+          # Install yt-dlp
+          subprocess.check_call(
+              [sys.executable, "-m", "pip", "install", "-q", "yt-dlp"],
+              stdout=subprocess.DEVNULL
+          )
+          # Run skill script
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "yt-dlp", "download.py")
+          result = subprocess.run(
+              [sys.executable, script, url_val],
+              capture_output=True, text=True, timeout=240
+          )
+          if result.returncode != 0:
+              error = result.stderr.strip()[-300:] if result.stderr else "Download failed"
+              print(json.dumps({"ok": False, "error": error}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_DOWNLOAD-VIDEO_EOF
+          chmod +x /opt/gh-aw/safe-inputs/download-video.py
           cat > /opt/gh-aw/safe-inputs/send-telegram-message.py << 'GH_AW_SAFE_INPUTS_PY_SEND-TELEGRAM-MESSAGE_EOF'
           #!/usr/bin/env python3
           # Auto-generated safe-input tool: send-telegram-message
@@ -469,6 +562,59 @@ jobs:
           
           GH_AW_SAFE_INPUTS_PY_SEND-TELEGRAM-PHOTO_EOF
           chmod +x /opt/gh-aw/safe-inputs/send-telegram-photo.py
+          cat > /opt/gh-aw/safe-inputs/send-telegram-video.py << 'GH_AW_SAFE_INPUTS_PY_SEND-TELEGRAM-VIDEO_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: send-telegram-video
+          # Send a video file to a Telegram chat
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # caption = inputs.get('caption')  # Optional caption for the video
+          # chat_id = inputs.get('chat_id')  # The Telegram chat ID to send the video to
+          # video_path = inputs.get('video_path')  # Absolute file path of the video to send
+          
+          # User code:
+          import os, json, urllib.request
+          token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
+          chat_id_val = inputs.get("chat_id", "")
+          video_path = inputs.get("video_path", "")
+          caption = inputs.get("caption", "")
+          if not os.path.exists(video_path):
+              print(json.dumps({"ok": False, "error": f"File not found: {video_path}"}))
+              raise SystemExit(1)
+          filesize = os.path.getsize(video_path)
+          if filesize > 50 * 1024 * 1024:
+              print(json.dumps({"ok": False, "error": f"File too large: {filesize} bytes (max 50MB)"}))
+              raise SystemExit(1)
+          boundary = "----YtDlpUpload"
+          body = b""
+          body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"chat_id\"\r\n\r\n{chat_id_val}\r\n".encode()
+          if caption:
+              body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"caption\"\r\n\r\n{caption}\r\n".encode()
+          with open(video_path, "rb") as f:
+              video_data = f.read()
+          filename = os.path.basename(video_path)
+          body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"video\"; filename=\"{filename}\"\r\nContent-Type: video/mp4\r\n\r\n".encode()
+          body += video_data
+          body += f"\r\n--{boundary}--\r\n".encode()
+          url = f"https://api.telegram.org/bot{token}/sendVideo"
+          req = urllib.request.Request(url, data=body, headers={"Content-Type": f"multipart/form-data; boundary={boundary}"})
+          resp = urllib.request.urlopen(req, timeout=120)
+          data = json.loads(resp.read())
+          print(json.dumps({"ok": True, "message_id": data.get("result", {}).get("message_id")}))
+          
+          
+          GH_AW_SAFE_INPUTS_PY_SEND-TELEGRAM-VIDEO_EOF
+          chmod +x /opt/gh-aw/safe-inputs/send-telegram-video.py
           
       - name: Generate Safe Inputs MCP Server Config
         id: safe-inputs-config
