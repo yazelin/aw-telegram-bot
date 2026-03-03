@@ -1,0 +1,97 @@
+name: Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+concurrency:
+  group: copilot-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Generate scoped token
+        id: token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Count previous reviews
+        id: count
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          COUNT=$(gh api repos/${{ github.repository }}/pulls/${PR_NUM}/reviews --jq 'length')
+          echo "review_count=${COUNT}" >> "$GITHUB_OUTPUT"
+          echo "Review count for PR #${PR_NUM}: ${COUNT}"
+
+      - name: Bail if too many reviews
+        if: ${{ steps.count.outputs.review_count >= 3 }}
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
+          NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          ISSUE_NUM=$(gh pr view ${PR_NUM} --json body --jq '.body' | grep -oP 'Closes #\K\d+' || echo "")
+          if [ -n "$ISSUE_NUM" ]; then
+            gh issue edit ${ISSUE_NUM} --add-label needs-human-review
+          fi
+          gh workflow run notify.yml --repo ${NOTIFY_REPO} \
+            -f chat_id="${NOTIFY_CHAT_ID}" \
+            -f text="⚠️ ${{ github.repository }} PR #${PR_NUM} failed review 3 times, needs human review"
+          gh workflow run implement.yml
+          echo "Bailed: too many reviews"
+
+      - name: Review
+        if: ${{ steps.count.outputs.review_count < 3 }}
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
+          NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+
+          copilot --autopilot \
+            --model gpt-5.3-codex \
+            --max-autopilot-continues 10 \
+            -p "
+              You are a code reviewer for repository ${GH_REPO}.
+              Read AGENTS.md to understand the project spec and acceptance criteria.
+
+              Review PR #${PR_NUM}.
+              - Run: gh pr diff ${PR_NUM}
+              - Read the linked issue for acceptance criteria
+              - Check code quality, correctness, and completeness
+
+              IF the code is good and meets all acceptance criteria:
+                1. gh pr review ${PR_NUM} --approve -b 'LGTM - code meets requirements'
+                2. gh pr merge ${PR_NUM} --squash --delete-branch
+                3. gh workflow run implement.yml (trigger next issue)
+                4. gh workflow run notify.yml --repo ${NOTIFY_REPO} -f chat_id=${NOTIFY_CHAT_ID} -f text='🔀 ${GH_REPO} PR #${PR_NUM} merged'
+
+              IF there are issues:
+                1. gh pr review ${PR_NUM} --request-changes -b '<specific feedback>'
+                2. gh workflow run implement.yml (to fix the PR)
+            "

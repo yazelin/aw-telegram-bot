@@ -1,0 +1,91 @@
+name: Implement Issue
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: copilot-implement
+  cancel-in-progress: false
+
+jobs:
+  implement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - name: Generate scoped token
+        id: token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          token: ${{ steps.token.outputs.token }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Copilot CLI
+        run: npm install -g @github/copilot
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Implement
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+          NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
+          NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
+        run: |
+          copilot --autopilot --yolo \
+            --model gpt-5.3-codex \
+            --max-autopilot-continues 30 \
+            -p "
+              You are an autonomous coding agent working on repository ${GH_REPO}.
+              Read AGENTS.md to understand the project spec and tech stack.
+              Read .github/skills/ to understand development standards.
+
+              Check current state and act accordingly:
+
+              CASE A: There is an open PR with review comments requesting changes.
+                - Find the open PR: gh pr list --state open --json number,headRefName
+                - Check out its branch: git checkout <branch>
+                - Read review comments: gh pr view <number> --comments
+                - Address ALL review comments with code changes
+                - git add, commit, push to the same branch
+                - The push will trigger review.yml automatically
+                - Exit
+
+              CASE B: No open PR, but there are open issues (excluding label:agent-stuck and label:needs-human-review).
+                - Find the oldest open issue: gh issue list --state open --json number,title,labels --jq '[.[] | select(.labels | map(.name) | (contains([\"agent-stuck\"]) or contains([\"needs-human-review\"])) | not)] | sort_by(.number) | .[0]'
+                - If no actionable issue found, go to CASE C
+                - Create a branch: git checkout -b issue-<number>-<slug>
+                - Implement the issue following AGENTS.md tech stack
+                - Write tests if applicable
+                - git add, commit, push
+                - Create PR: gh pr create --title 'Implement #<number>: <title>' --body 'Closes #<number>\n\nSummary: ...\nValidation: ...'
+                - Exit
+
+              CASE C: No open PR, no actionable issues.
+                - All work is complete
+                - Notify: gh workflow run notify.yml --repo ${NOTIFY_REPO} -f chat_id=${NOTIFY_CHAT_ID} -f text='✅ ${GH_REPO} all issues completed!'
+                - Exit
+
+              ERROR HANDLING:
+              If you cannot complete an issue after reasonable effort:
+                - Comment on the issue explaining what went wrong
+                - Add label: gh issue edit <number> --add-label agent-stuck
+                - Notify: gh workflow run notify.yml --repo ${NOTIFY_REPO} -f chat_id=${NOTIFY_CHAT_ID} -f text='⚠️ ${GH_REPO} issue #<number> is stuck: <reason>'
+                - Trigger self for next issue: gh workflow run implement.yml
+                - Exit
+            "
