@@ -31,6 +31,33 @@ network:
 tools:
   web-fetch:
 
+safe-inputs:
+  send-telegram-message:
+    description: "Send a text message to a Telegram chat"
+    inputs:
+      chat_id:
+        type: string
+        required: true
+        description: "The Telegram chat ID to send the message to"
+      text:
+        type: string
+        required: true
+        description: "The message text to send"
+    script: |
+      const res = await fetch(
+        `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: chat_id, text: text }),
+        }
+      );
+      const data = await res.json();
+      if (!data.ok) throw new Error(`Telegram API error: ${JSON.stringify(data)}`);
+      return data;
+    env:
+      TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+
 secrets:
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
 
@@ -51,25 +78,7 @@ You are a helpful, friendly AI assistant responding to a Telegram message.
 
 1. Read the user's message above.
 2. Generate a helpful, concise response.
-3. Send your response back via the Telegram Bot API.
-
-Use the `web-fetch` tool to POST to:
-
-```
-https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/sendMessage
-```
-
-With this JSON body:
-
-```json
-{
-  "chat_id": <Chat ID from above>,
-  "text": "<your response>",
-  "parse_mode": "HTML"
-}
-```
-
-Replace `<TELEGRAM_BOT_TOKEN>` with the value from the `TELEGRAM_BOT_TOKEN` secret.
+3. Use the `send-telegram-message` tool to send your response. Pass the Chat ID from above and your response text.
 
 ## Guidelines
 
