@@ -16,18 +16,22 @@ jobs:
     timeout-minutes: 2
     steps:
       - name: Verify caller
+        env:
+          ACTOR: ${{ github.actor }}
         run: |
-          if [[ "${{ github.actor }}" != "yazelin" && \
-                "${{ github.actor }}" != "github-actions[bot]" ]]; then
-            echo "::error::Unauthorized caller: ${{ github.actor }}"
+          if [[ "$ACTOR" != "yazelin" && \
+                "$ACTOR" != "github-actions[bot]" ]]; then
+            echo "::error::Unauthorized caller: $ACTOR"
             exit 1
           fi
 
       - name: Send Telegram message
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ inputs.chat_id }}
+          TEXT: ${{ inputs.text }}
         run: |
           curl -sf -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\": \"${{ inputs.chat_id }}\", \"text\": $(echo '${{ inputs.text }}' | jq -Rs .)}"
+            -d "{\"chat_id\": \"${CHAT_ID}\", \"text\": $(echo "$TEXT" | jq -Rs .)}"
