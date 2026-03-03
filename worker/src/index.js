@@ -37,6 +37,17 @@ async function handleWebhook(request, env, ctx) {
     return new Response("OK", { status: 200 });
   }
 
+  // Whitelist check: user ID or chat ID must be allowed
+  const msg = update.message;
+  const userId = String(msg.from?.id || "");
+  const chatId = String(msg.chat.id);
+  const allowedUsers = (env.ALLOWED_USERS || "").split(",").map(s => s.trim()).filter(Boolean);
+  const allowedChats = (env.ALLOWED_CHATS || "").split(",").map(s => s.trim()).filter(Boolean);
+
+  if (!allowedUsers.includes(userId) && !allowedChats.includes(chatId)) {
+    return new Response("OK", { status: 200 });
+  }
+
   // Fire-and-forget: dispatch to GitHub
   ctx.waitUntil(dispatchToGitHub(update, env));
 
