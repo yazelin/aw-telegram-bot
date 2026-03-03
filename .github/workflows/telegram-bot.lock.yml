@@ -24,7 +24,7 @@
 # Telegram chatbot powered by Copilot. Receives messages via workflow_dispatch
 # from Cloudflare Worker relay, generates a response, and replies via Telegram API.
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"c092507d50cfdfb88cb36d101210d6e55219068bfcb9c47cc26298a03774aa93","compiler_version":"v0.51.8"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"4cc5dd00b193b45fffc1453dbc07d3b4dbde63e526be9f0de5891602cfcdcc7c","compiler_version":"v0.51.8"}
 
 name: "Telegram Chatbot"
 "on":
@@ -603,7 +603,10 @@ jobs:
           with open(video_path, "rb") as f:
               video_data = f.read()
           filename = os.path.basename(video_path)
-          body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"video\"; filename=\"{filename}\"\r\nContent-Type: video/mp4\r\n\r\n".encode()
+          ext = os.path.splitext(filename)[1].lower()
+          content_type = {"webm": "video/webm", "mkv": "video/x-matroska", "mp4": "video/mp4"}.get(ext.lstrip("."), "video/mp4")
+          body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"supports_streaming\"\r\n\r\ntrue\r\n".encode()
+          body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"video\"; filename=\"{filename}\"\r\nContent-Type: {content_type}\r\n\r\n".encode()
           body += video_data
           body += f"\r\n--{boundary}--\r\n".encode()
           url = f"https://api.telegram.org/bot{token}/sendVideo"

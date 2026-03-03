@@ -189,7 +189,10 @@ safe-inputs:
       with open(video_path, "rb") as f:
           video_data = f.read()
       filename = os.path.basename(video_path)
-      body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"video\"; filename=\"{filename}\"\r\nContent-Type: video/mp4\r\n\r\n".encode()
+      ext = os.path.splitext(filename)[1].lower()
+      content_type = {"webm": "video/webm", "mkv": "video/x-matroska", "mp4": "video/mp4"}.get(ext.lstrip("."), "video/mp4")
+      body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"supports_streaming\"\r\n\r\ntrue\r\n".encode()
+      body += f"--{boundary}\r\nContent-Disposition: form-data; name=\"video\"; filename=\"{filename}\"\r\nContent-Type: {content_type}\r\n\r\n".encode()
       body += video_data
       body += f"\r\n--{boundary}--\r\n".encode()
       url = f"https://api.telegram.org/bot{token}/sendVideo"
