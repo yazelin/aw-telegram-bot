@@ -120,8 +120,9 @@ safe-inputs:
 secrets:
   TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+  TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
 
-timeout-minutes: 5
+timeout-minutes: 15
 ---
 
 # Telegram Chatbot

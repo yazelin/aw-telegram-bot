@@ -24,7 +24,7 @@
 # Telegram chatbot powered by Copilot. Receives messages via workflow_dispatch
 # from Cloudflare Worker relay, generates a response, and replies via Telegram API.
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"9d23f7cdffdc607db5ccce8ebce4aa86e4565d46328e71f5a2f271093dddf95c","compiler_version":"v0.51.8"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"1494dd74a9b6d156a8230da765cc24b9e4d52dbd47a1398f38bbd33f10617f04","compiler_version":"v0.51.8"}
 
 name: "Telegram Chatbot"
 "on":
@@ -599,7 +599,7 @@ jobs:
       - name: Execute GitHub Copilot CLI
         id: agentic_execution
         # Copilot CLI tool arguments (sorted):
-        timeout-minutes: 5
+        timeout-minutes: 15
         run: |
           set -o pipefail
           # shellcheck disable=SC1003
