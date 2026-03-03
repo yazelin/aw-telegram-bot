@@ -28,9 +28,11 @@ network:
     - defaults
     - api.telegram.org
     - generativelanguage.googleapis.com
+    - mcp.tavily.com
 
 tools:
   web-fetch:
+  web-search:
 
 mcp-servers:
   nanobanana:
@@ -45,6 +47,9 @@ mcp-servers:
       NANOBANANA_TIMEOUT: "120"
       NANOBANANA_DEBUG: "1"
     allowed: [generate_image]
+  tavily:
+    url: "https://mcp.tavily.com/mcp/?tavilyApiKey=${{ secrets.TAVILY_API_KEY }}"
+    allowed: ["*"]
 
 safe-inputs:
   send-telegram-message:
