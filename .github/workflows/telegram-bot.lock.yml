@@ -24,7 +24,7 @@
 # Telegram chatbot powered by Copilot. Receives messages via workflow_dispatch
 # from Cloudflare Worker relay, generates a response, and replies via Telegram API.
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"4cc5dd00b193b45fffc1453dbc07d3b4dbde63e526be9f0de5891602cfcdcc7c","compiler_version":"v0.51.8"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"cd4e5a2b60b6a69c01ebfa88b9d70fa175653a18c38f4e5fba1b2c042ac2e40b","compiler_version":"v0.51.8"}
 
 name: "Telegram Chatbot"
 "on":
@@ -76,7 +76,7 @@ jobs:
           GH_AW_INFO_EXPERIMENTAL: "false"
           GH_AW_INFO_SUPPORTS_TOOLS_ALLOWLIST: "true"
           GH_AW_INFO_STAGED: "false"
-          GH_AW_INFO_ALLOWED_DOMAINS: '["defaults","api.telegram.org","generativelanguage.googleapis.com","mcp.tavily.com"]'
+          GH_AW_INFO_ALLOWED_DOMAINS: '["defaults","api.telegram.org","generativelanguage.googleapis.com","mcp.tavily.com","github.com"]'
           GH_AW_INFO_FIREWALL_ENABLED: "true"
           GH_AW_INFO_AWF_VERSION: "v0.23.0"
           GH_AW_INFO_AWMG_VERSION: ""
@@ -313,6 +313,63 @@ jobs:
             "logDir": "/opt/gh-aw/safe-inputs/logs",
             "tools": [
               {
+                "name": "create-issues",
+                "description": "Create multiple issues in a repository",
+                "inputSchema": {
+                  "properties": {
+                    "issues_json": {
+                      "description": "JSON array of {title, body} objects",
+                      "type": "string"
+                    },
+                    "repo": {
+                      "description": "Repository full name (e.g. yazelin/minesweeper-web)",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "issues_json",
+                    "repo"
+                  ],
+                  "type": "object"
+                },
+                "handler": "create-issues.py",
+                "env": {
+                  "GH_TOKEN": "GH_TOKEN"
+                },
+                "timeout": 120
+              },
+              {
+                "name": "create-repo",
+                "description": "Create a new GitHub repository",
+                "inputSchema": {
+                  "properties": {
+                    "name": {
+                      "description": "Repository name (e.g. minesweeper-web)",
+                      "type": "string"
+                    },
+                    "owner": {
+                      "description": "Repository owner (e.g. yazelin)",
+                      "type": "string"
+                    },
+                    "repo_description": {
+                      "description": "Short description for the repository",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "owner",
+                    "repo_description"
+                  ],
+                  "type": "object"
+                },
+                "handler": "create-repo.py",
+                "env": {
+                  "GH_TOKEN": "GH_TOKEN"
+                },
+                "timeout": 60
+              },
+              {
                 "name": "download-video",
                 "description": "Download a video from a URL using yt-dlp (360p, no ffmpeg)",
                 "inputSchema": {
@@ -329,6 +386,73 @@ jobs:
                 },
                 "handler": "download-video.py",
                 "timeout": 300
+              },
+              {
+                "name": "manage-labels",
+                "description": "Add or remove a label on an issue or PR",
+                "inputSchema": {
+                  "properties": {
+                    "action": {
+                      "description": "'add' or 'remove'",
+                      "type": "string"
+                    },
+                    "label": {
+                      "description": "Label name",
+                      "type": "string"
+                    },
+                    "number": {
+                      "description": "Issue or PR number",
+                      "type": "string"
+                    },
+                    "repo": {
+                      "description": "Repository full name",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "action",
+                    "label",
+                    "number",
+                    "repo"
+                  ],
+                  "type": "object"
+                },
+                "handler": "manage-labels.py",
+                "env": {
+                  "GH_TOKEN": "GH_TOKEN"
+                },
+                "timeout": 30
+              },
+              {
+                "name": "post-comment",
+                "description": "Post a comment on an issue or PR in any repo",
+                "inputSchema": {
+                  "properties": {
+                    "body": {
+                      "description": "Comment body text",
+                      "type": "string"
+                    },
+                    "number": {
+                      "description": "Issue or PR number",
+                      "type": "string"
+                    },
+                    "repo": {
+                      "description": "Repository full name",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "body",
+                    "number",
+                    "repo"
+                  ],
+                  "type": "object"
+                },
+                "handler": "post-comment.py",
+                "env": {
+                  "GH_TOKEN": "GH_TOKEN"
+                },
+                "timeout": 30
               },
               {
                 "name": "send-telegram-message",
@@ -415,6 +539,86 @@ jobs:
                   "TELEGRAM_BOT_TOKEN": "TELEGRAM_BOT_TOKEN"
                 },
                 "timeout": 120
+              },
+              {
+                "name": "setup-repo",
+                "description": "Push initial files to a repository",
+                "inputSchema": {
+                  "properties": {
+                    "files_json": {
+                      "description": "JSON array of {path, content} objects to push",
+                      "type": "string"
+                    },
+                    "repo": {
+                      "description": "Repository full name (e.g. yazelin/minesweeper-web)",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "files_json",
+                    "repo"
+                  ],
+                  "type": "object"
+                },
+                "handler": "setup-repo.py",
+                "env": {
+                  "GH_TOKEN": "GH_TOKEN"
+                },
+                "timeout": 120
+              },
+              {
+                "name": "setup-secrets",
+                "description": "Set secrets on a repository",
+                "inputSchema": {
+                  "properties": {
+                    "repo": {
+                      "description": "Repository full name",
+                      "type": "string"
+                    },
+                    "secrets_json": {
+                      "description": "JSON array of {name, value} objects",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "repo",
+                    "secrets_json"
+                  ],
+                  "type": "object"
+                },
+                "handler": "setup-secrets.py",
+                "env": {
+                  "APP_ID_VALUE": "APP_ID_VALUE",
+                  "APP_PRIVATE_KEY_VALUE": "APP_PRIVATE_KEY_VALUE",
+                  "GH_TOKEN": "GH_TOKEN"
+                },
+                "timeout": 60
+              },
+              {
+                "name": "trigger-workflow",
+                "description": "Trigger a workflow in a repository",
+                "inputSchema": {
+                  "properties": {
+                    "repo": {
+                      "description": "Repository full name",
+                      "type": "string"
+                    },
+                    "workflow": {
+                      "description": "Workflow filename (e.g. implement.yml)",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "repo",
+                    "workflow"
+                  ],
+                  "type": "object"
+                },
+                "handler": "trigger-workflow.py",
+                "env": {
+                  "GH_TOKEN": "GH_TOKEN"
+                },
+                "timeout": 30
               }
             ]
           }
@@ -438,6 +642,85 @@ jobs:
           
       - name: Setup Safe Inputs Tool Files
         run: |
+          cat > /opt/gh-aw/safe-inputs/create-issues.py << 'GH_AW_SAFE_INPUTS_PY_CREATE-ISSUES_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: create-issues
+          # Create multiple issues in a repository
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # issues_json = inputs.get('issues_json')  # JSON array of {title, body} objects
+          # repo = inputs.get('repo')  # Repository full name (e.g. yazelin/minesweeper-web)
+          
+          # User code:
+          import subprocess, sys, os, json
+          repo = inputs.get("repo", "")
+          issues_json = inputs.get("issues_json", "[]")
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "app-factory", "create_issues.py")
+          result = subprocess.run(
+              [sys.executable, script, repo, issues_json],
+              capture_output=True, text=True, timeout=120,
+              env={**os.environ}
+          )
+          if result.returncode != 0:
+              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_CREATE-ISSUES_EOF
+          chmod +x /opt/gh-aw/safe-inputs/create-issues.py
+          cat > /opt/gh-aw/safe-inputs/create-repo.py << 'GH_AW_SAFE_INPUTS_PY_CREATE-REPO_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: create-repo
+          # Create a new GitHub repository
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # name = inputs.get('name')  # Repository name (e.g. minesweeper-web)
+          # owner = inputs.get('owner')  # Repository owner (e.g. yazelin)
+          # repo_description = inputs.get('repo_description')  # Short description for the repository
+          
+          # User code:
+          import subprocess, sys, os, json
+          owner = inputs.get("owner", "")
+          name = inputs.get("name", "")
+          desc = inputs.get("repo_description", "")
+          repo = f"{owner}/{name}"
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "app-factory", "create_repo.py")
+          result = subprocess.run(
+              [sys.executable, script, repo, desc],
+              capture_output=True, text=True, timeout=60,
+              env={**os.environ}
+          )
+          if result.returncode != 0:
+              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_CREATE-REPO_EOF
+          chmod +x /opt/gh-aw/safe-inputs/create-repo.py
           cat > /opt/gh-aw/safe-inputs/download-video.py << 'GH_AW_SAFE_INPUTS_PY_DOWNLOAD-VIDEO_EOF'
           #!/usr/bin/env python3
           # Auto-generated safe-input tool: download-video
@@ -483,6 +766,88 @@ jobs:
           
           GH_AW_SAFE_INPUTS_PY_DOWNLOAD-VIDEO_EOF
           chmod +x /opt/gh-aw/safe-inputs/download-video.py
+          cat > /opt/gh-aw/safe-inputs/manage-labels.py << 'GH_AW_SAFE_INPUTS_PY_MANAGE-LABELS_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: manage-labels
+          # Add or remove a label on an issue or PR
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # action = inputs.get('action')  # 'add' or 'remove'
+          # label = inputs.get('label')  # Label name
+          # number = inputs.get('number')  # Issue or PR number
+          # repo = inputs.get('repo')  # Repository full name
+          
+          # User code:
+          import subprocess, sys, os, json
+          repo = inputs.get("repo", "")
+          number = inputs.get("number", "")
+          action = inputs.get("action", "")
+          label = inputs.get("label", "")
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "app-factory", "manage_labels.py")
+          result = subprocess.run(
+              [sys.executable, script, repo, number, action, label],
+              capture_output=True, text=True, timeout=30,
+              env={**os.environ}
+          )
+          if result.returncode != 0:
+              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_MANAGE-LABELS_EOF
+          chmod +x /opt/gh-aw/safe-inputs/manage-labels.py
+          cat > /opt/gh-aw/safe-inputs/post-comment.py << 'GH_AW_SAFE_INPUTS_PY_POST-COMMENT_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: post-comment
+          # Post a comment on an issue or PR in any repo
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # body = inputs.get('body')  # Comment body text
+          # number = inputs.get('number')  # Issue or PR number
+          # repo = inputs.get('repo')  # Repository full name
+          
+          # User code:
+          import subprocess, sys, os, json
+          repo = inputs.get("repo", "")
+          number = inputs.get("number", "")
+          body = inputs.get("body", "")
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "app-factory", "post_comment.py")
+          result = subprocess.run(
+              [sys.executable, script, repo, number, body],
+              capture_output=True, text=True, timeout=30,
+              env={**os.environ}
+          )
+          if result.returncode != 0:
+              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_POST-COMMENT_EOF
+          chmod +x /opt/gh-aw/safe-inputs/post-comment.py
           cat > /opt/gh-aw/safe-inputs/send-telegram-message.py << 'GH_AW_SAFE_INPUTS_PY_SEND-TELEGRAM-MESSAGE_EOF'
           #!/usr/bin/env python3
           # Auto-generated safe-input tool: send-telegram-message
@@ -618,6 +983,120 @@ jobs:
           
           GH_AW_SAFE_INPUTS_PY_SEND-TELEGRAM-VIDEO_EOF
           chmod +x /opt/gh-aw/safe-inputs/send-telegram-video.py
+          cat > /opt/gh-aw/safe-inputs/setup-repo.py << 'GH_AW_SAFE_INPUTS_PY_SETUP-REPO_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: setup-repo
+          # Push initial files to a repository
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # files_json = inputs.get('files_json')  # JSON array of {path, content} objects to push
+          # repo = inputs.get('repo')  # Repository full name (e.g. yazelin/minesweeper-web)
+          
+          # User code:
+          import subprocess, sys, os, json
+          repo = inputs.get("repo", "")
+          files_json = inputs.get("files_json", "[]")
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "app-factory", "setup_repo.py")
+          result = subprocess.run(
+              [sys.executable, script, repo, files_json],
+              capture_output=True, text=True, timeout=120,
+              env={**os.environ}
+          )
+          if result.returncode != 0:
+              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_SETUP-REPO_EOF
+          chmod +x /opt/gh-aw/safe-inputs/setup-repo.py
+          cat > /opt/gh-aw/safe-inputs/setup-secrets.py << 'GH_AW_SAFE_INPUTS_PY_SETUP-SECRETS_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: setup-secrets
+          # Set secrets on a repository
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # repo = inputs.get('repo')  # Repository full name
+          # secrets_json = inputs.get('secrets_json')  # JSON array of {name, value} objects
+          
+          # User code:
+          import subprocess, sys, os, json
+          repo = inputs.get("repo", "")
+          secrets_json = inputs.get("secrets_json", "[]")
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "app-factory", "setup_secrets.py")
+          result = subprocess.run(
+              [sys.executable, script, repo, secrets_json],
+              capture_output=True, text=True, timeout=60,
+              env={**os.environ}
+          )
+          if result.returncode != 0:
+              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_SETUP-SECRETS_EOF
+          chmod +x /opt/gh-aw/safe-inputs/setup-secrets.py
+          cat > /opt/gh-aw/safe-inputs/trigger-workflow.py << 'GH_AW_SAFE_INPUTS_PY_TRIGGER-WORKFLOW_EOF'
+          #!/usr/bin/env python3
+          # Auto-generated safe-input tool: trigger-workflow
+          # Trigger a workflow in a repository
+          
+          import json
+          import os
+          import sys
+          
+          # Read inputs from stdin (JSON format)
+          try:
+              inputs = json.loads(sys.stdin.read()) if not sys.stdin.isatty() else {}
+          except (json.JSONDecodeError, Exception):
+              inputs = {}
+          
+          # Input parameters available in 'inputs' dictionary:
+          # repo = inputs.get('repo')  # Repository full name
+          # workflow = inputs.get('workflow')  # Workflow filename (e.g. implement.yml)
+          
+          # User code:
+          import subprocess, sys, os, json
+          repo = inputs.get("repo", "")
+          workflow = inputs.get("workflow", "")
+          workspace = os.environ.get("GITHUB_WORKSPACE", "")
+          script = os.path.join(workspace, ".github", "skills", "app-factory", "trigger_workflow.py")
+          result = subprocess.run(
+              [sys.executable, script, repo, workflow],
+              capture_output=True, text=True, timeout=30,
+              env={**os.environ}
+          )
+          if result.returncode != 0:
+              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          else:
+              print(result.stdout)
+          
+          
+          GH_AW_SAFE_INPUTS_PY_TRIGGER-WORKFLOW_EOF
+          chmod +x /opt/gh-aw/safe-inputs/trigger-workflow.py
           
       - name: Generate Safe Inputs MCP Server Config
         id: safe-inputs-config
@@ -643,6 +1122,9 @@ jobs:
           DEBUG: '*'
           GH_AW_SAFE_INPUTS_PORT: ${{ steps.safe-inputs-config.outputs.safe_inputs_port }}
           GH_AW_SAFE_INPUTS_API_KEY: ${{ steps.safe-inputs-config.outputs.safe_inputs_api_key }}
+          APP_ID_VALUE: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY_VALUE: ${{ secrets.APP_PRIVATE_KEY }}
+          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         run: |
           # Environment variables are set above to prevent template injection
@@ -655,9 +1137,12 @@ jobs:
       - name: Start MCP Gateway
         id: start-mcp-gateway
         env:
+          APP_ID_VALUE: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY_VALUE: ${{ secrets.APP_PRIVATE_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GH_AW_SAFE_INPUTS_API_KEY: ${{ steps.safe-inputs-start.outputs.api_key }}
           GH_AW_SAFE_INPUTS_PORT: ${{ steps.safe-inputs-start.outputs.port }}
+          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
           GITHUB_MCP_LOCKDOWN: ${{ steps.determine-automatic-lockdown.outputs.lockdown == 'true' && '1' || '0' }}
           GITHUB_MCP_SERVER_TOKEN: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -677,7 +1162,7 @@ jobs:
           export DEBUG="*"
           
           export GH_AW_ENGINE="copilot"
-          export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host -v /var/run/docker.sock:/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_LOCKDOWN -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e GH_AW_SAFE_INPUTS_PORT -e GH_AW_SAFE_INPUTS_API_KEY -e GEMINI_API_KEY -e TELEGRAM_BOT_TOKEN -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.1.6'
+          export MCP_GATEWAY_DOCKER_COMMAND='docker run -i --rm --network host -v /var/run/docker.sock:/var/run/docker.sock -e MCP_GATEWAY_PORT -e MCP_GATEWAY_DOMAIN -e MCP_GATEWAY_API_KEY -e MCP_GATEWAY_PAYLOAD_DIR -e MCP_GATEWAY_PAYLOAD_SIZE_THRESHOLD -e DEBUG -e MCP_GATEWAY_LOG_DIR -e GH_AW_MCP_LOG_DIR -e GH_AW_SAFE_OUTPUTS -e GH_AW_SAFE_OUTPUTS_CONFIG_PATH -e GH_AW_SAFE_OUTPUTS_TOOLS_PATH -e GH_AW_ASSETS_BRANCH -e GH_AW_ASSETS_MAX_SIZE_KB -e GH_AW_ASSETS_ALLOWED_EXTS -e DEFAULT_BRANCH -e GITHUB_MCP_SERVER_TOKEN -e GITHUB_MCP_LOCKDOWN -e GITHUB_REPOSITORY -e GITHUB_SERVER_URL -e GITHUB_SHA -e GITHUB_WORKSPACE -e GITHUB_TOKEN -e GITHUB_RUN_ID -e GITHUB_RUN_NUMBER -e GITHUB_RUN_ATTEMPT -e GITHUB_JOB -e GITHUB_ACTION -e GITHUB_EVENT_NAME -e GITHUB_EVENT_PATH -e GITHUB_ACTOR -e GITHUB_ACTOR_ID -e GITHUB_TRIGGERING_ACTOR -e GITHUB_WORKFLOW -e GITHUB_WORKFLOW_REF -e GITHUB_WORKFLOW_SHA -e GITHUB_REF -e GITHUB_REF_NAME -e GITHUB_REF_TYPE -e GITHUB_HEAD_REF -e GITHUB_BASE_REF -e GH_AW_SAFE_INPUTS_PORT -e GH_AW_SAFE_INPUTS_API_KEY -e APP_ID_VALUE -e APP_PRIVATE_KEY_VALUE -e GEMINI_API_KEY -e GH_TOKEN -e TELEGRAM_BOT_TOKEN -v /tmp/gh-aw/mcp-payloads:/tmp/gh-aw/mcp-payloads:rw -v /opt:/opt:ro -v /tmp:/tmp:rw -v '"${GITHUB_WORKSPACE}"':'"${GITHUB_WORKSPACE}"':rw ghcr.io/github/gh-aw-mcpg:v0.1.6'
           
           mkdir -p /home/runner/.copilot
           cat << GH_AW_MCP_CONFIG_EOF | bash /opt/gh-aw/actions/start_mcp_gateway.sh
@@ -756,11 +1241,14 @@ jobs:
           sudo -E awf --env-all --container-workdir "${GITHUB_WORKSPACE}" --allow-domains "api.business.githubcopilot.com,api.enterprise.githubcopilot.com,api.github.com,api.githubcopilot.com,api.individual.githubcopilot.com,api.snapcraft.io,api.telegram.org,archive.ubuntu.com,azure.archive.ubuntu.com,crl.geotrust.com,crl.globalsign.com,crl.identrust.com,crl.sectigo.com,crl.thawte.com,crl.usertrust.com,crl.verisign.com,crl3.digicert.com,crl4.digicert.com,crls.ssl.com,generativelanguage.googleapis.com,github.com,host.docker.internal,json-schema.org,json.schemastore.org,keyserver.ubuntu.com,mcp.tavily.com,ocsp.digicert.com,ocsp.geotrust.com,ocsp.globalsign.com,ocsp.identrust.com,ocsp.sectigo.com,ocsp.ssl.com,ocsp.thawte.com,ocsp.usertrust.com,ocsp.verisign.com,packagecloud.io,packages.cloud.google.com,packages.microsoft.com,ppa.launchpad.net,raw.githubusercontent.com,registry.npmjs.org,s.symcb.com,s.symcd.com,security.ubuntu.com,telemetry.enterprise.githubcopilot.com,ts-crl.ws.symantec.com,ts-ocsp.ws.symantec.com" --log-level info --proxy-logs-dir /tmp/gh-aw/sandbox/firewall/logs --enable-host-access --image-tag 0.23.0 --skip-pull --enable-api-proxy \
             -- /bin/bash -c '/usr/local/bin/copilot --add-dir /tmp/gh-aw/ --log-level all --log-dir /tmp/gh-aw/sandbox/agent/logs/ --add-dir "${GITHUB_WORKSPACE}" --disable-builtin-mcps --allow-all-tools --allow-all-paths --prompt "$(cat /tmp/gh-aw/aw-prompts/prompt.txt)"' 2>&1 | tee -a /tmp/gh-aw/agent-stdio.log
         env:
+          APP_ID_VALUE: ${{ secrets.APP_ID }}
+          APP_PRIVATE_KEY_VALUE: ${{ secrets.APP_PRIVATE_KEY }}
           COPILOT_AGENT_RUNNER_TYPE: STANDALONE
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           COPILOT_MODEL: gpt-5.3-codex
           GH_AW_MCP_CONFIG: /home/runner/.copilot/mcp-config.json
           GH_AW_PROMPT: /tmp/gh-aw/aw-prompts/prompt.txt
+          GH_TOKEN: ${{ secrets.FACTORY_PAT }}
           GITHUB_API_URL: ${{ github.api_url }}
           GITHUB_HEAD_REF: ${{ github.head_ref }}
           GITHUB_MCP_SERVER_TOKEN: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN || secrets.GH_AW_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
@@ -818,8 +1306,11 @@ jobs:
             const { main } = require('/opt/gh-aw/actions/redact_secrets.cjs');
             await main();
         env:
-          GH_AW_SECRET_NAMES: 'COPILOT_GITHUB_TOKEN,GEMINI_API_KEY,GH_AW_GITHUB_MCP_SERVER_TOKEN,GH_AW_GITHUB_TOKEN,GITHUB_TOKEN,TAVILY_API_KEY,TELEGRAM_BOT_TOKEN'
+          GH_AW_SECRET_NAMES: 'APP_ID,APP_PRIVATE_KEY,COPILOT_GITHUB_TOKEN,FACTORY_PAT,GEMINI_API_KEY,GH_AW_GITHUB_MCP_SERVER_TOKEN,GH_AW_GITHUB_TOKEN,GITHUB_TOKEN,TAVILY_API_KEY,TELEGRAM_BOT_TOKEN'
+          SECRET_APP_ID: ${{ secrets.APP_ID }}
+          SECRET_APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
           SECRET_COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          SECRET_FACTORY_PAT: ${{ secrets.FACTORY_PAT }}
           SECRET_GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           SECRET_GH_AW_GITHUB_MCP_SERVER_TOKEN: ${{ secrets.GH_AW_GITHUB_MCP_SERVER_TOKEN }}
           SECRET_GH_AW_GITHUB_TOKEN: ${{ secrets.GH_AW_GITHUB_TOKEN }}
