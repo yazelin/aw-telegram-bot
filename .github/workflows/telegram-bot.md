@@ -17,7 +17,7 @@ on:
         required: false
 
 concurrency:
-  group: "gh-aw-${{ github.workflow }}-${{ github.event.inputs.chat_id }}"
+  group: "gh-aw-${{ github.workflow }}-${{ github.run_id }}"
   cancel-in-progress: false
 
 engine:
