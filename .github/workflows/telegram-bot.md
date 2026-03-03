@@ -44,18 +44,15 @@ safe-inputs:
         required: true
         description: "The message text to send"
     py: |
-      import os, json, urllib.request, sys
+      import os, json, urllib.request
       token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-      print(f"Token present: {bool(token)}, length: {len(token)}", file=sys.stderr)
       chat_id_val = inputs.get("chat_id", "")
       text_val = inputs.get("text", "")
-      print(f"chat_id: {chat_id_val}", file=sys.stderr)
       url = f"https://api.telegram.org/bot{token}/sendMessage"
       payload = json.dumps({"chat_id": chat_id_val, "text": text_val}).encode()
       req = urllib.request.Request(url, data=payload, headers={"Content-Type": "application/json"})
       resp = urllib.request.urlopen(req)
       data = json.loads(resp.read())
-      print(f"Telegram response: {json.dumps(data)}", file=sys.stderr)
       print(json.dumps({"ok": True, "message_id": data.get("result", {}).get("message_id")}))
     env:
       TELEGRAM_BOT_TOKEN: "${{ secrets.TELEGRAM_BOT_TOKEN }}"
