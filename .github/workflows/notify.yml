@@ -1,0 +1,33 @@
+name: Send Telegram Notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "Telegram chat ID"
+        required: true
+      text:
+        description: "Notification text"
+        required: true
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Verify caller
+        run: |
+          if [[ "${{ github.actor }}" != "yazelin" && \
+                "${{ github.actor }}" != "github-actions[bot]" ]]; then
+            echo "::error::Unauthorized caller: ${{ github.actor }}"
+            exit 1
+          fi
+
+      - name: Send Telegram message
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          curl -sf -X POST \
+            "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{\"chat_id\": \"${{ inputs.chat_id }}\", \"text\": $(echo '${{ inputs.text }}' | jq -Rs .)}"
