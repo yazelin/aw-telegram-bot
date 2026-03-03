@@ -24,7 +24,7 @@
 # Telegram chatbot powered by Copilot. Receives messages via workflow_dispatch
 # from Cloudflare Worker relay, generates a response, and replies via Telegram API.
 #
-# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"cd4e5a2b60b6a69c01ebfa88b9d70fa175653a18c38f4e5fba1b2c042ac2e40b","compiler_version":"v0.51.8"}
+# gh-aw-metadata: {"schema_version":"v1","frontmatter_hash":"3992294aee102bbeb5e07d57af16a8deaad65123cc773c29c3706d16e479dd95","compiler_version":"v0.51.8"}
 
 name: "Telegram Chatbot"
 "on":
@@ -673,7 +673,7 @@ jobs:
               env={**os.environ}
           )
           if result.returncode != 0:
-              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+              print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
           else:
               print(result.stdout)
           
@@ -714,7 +714,7 @@ jobs:
               env={**os.environ}
           )
           if result.returncode != 0:
-              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+              print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
           else:
               print(result.stdout)
           
@@ -801,7 +801,7 @@ jobs:
               env={**os.environ}
           )
           if result.returncode != 0:
-              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+              print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
           else:
               print(result.stdout)
           
@@ -841,7 +841,7 @@ jobs:
               env={**os.environ}
           )
           if result.returncode != 0:
-              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+              print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
           else:
               print(result.stdout)
           
@@ -1014,7 +1014,7 @@ jobs:
               env={**os.environ}
           )
           if result.returncode != 0:
-              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+              print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
           else:
               print(result.stdout)
           
@@ -1052,7 +1052,7 @@ jobs:
               env={**os.environ}
           )
           if result.returncode != 0:
-              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+              print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
           else:
               print(result.stdout)
           
@@ -1090,7 +1090,7 @@ jobs:
               env={**os.environ}
           )
           if result.returncode != 0:
-              print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+              print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
           else:
               print(result.stdout)
           

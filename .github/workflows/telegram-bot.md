@@ -234,7 +234,7 @@ safe-inputs:
           env={**os.environ}
       )
       if result.returncode != 0:
-          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
       else:
           print(result.stdout)
     env:
@@ -264,7 +264,7 @@ safe-inputs:
           env={**os.environ}
       )
       if result.returncode != 0:
-          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
       else:
           print(result.stdout)
     env:
@@ -294,7 +294,7 @@ safe-inputs:
           env={**os.environ}
       )
       if result.returncode != 0:
-          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
       else:
           print(result.stdout)
     env:
@@ -324,7 +324,7 @@ safe-inputs:
           env={**os.environ}
       )
       if result.returncode != 0:
-          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
       else:
           print(result.stdout)
     env:
@@ -356,7 +356,7 @@ safe-inputs:
           env={**os.environ}
       )
       if result.returncode != 0:
-          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
       else:
           print(result.stdout)
     env:
@@ -391,7 +391,7 @@ safe-inputs:
           env={**os.environ}
       )
       if result.returncode != 0:
-          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
       else:
           print(result.stdout)
     env:
@@ -431,7 +431,7 @@ safe-inputs:
           env={**os.environ}
       )
       if result.returncode != 0:
-          print(json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
       else:
           print(result.stdout)
     env:
