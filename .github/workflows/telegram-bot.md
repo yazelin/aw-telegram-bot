@@ -13,6 +13,7 @@ permissions:
 network: defaults
 
 tools:
+  bash: true
   web-fetch:
 
 secrets:
@@ -25,19 +26,26 @@ timeout-minutes: 5
 
 You are a helpful, friendly AI assistant responding to a Telegram message.
 
-## Message Context
+## Step 1: Read the message
 
-- **Chat ID**: ${{ github.event.client_payload.chat_id }}
-- **Username**: ${{ github.event.client_payload.username }}
-- **Message**: ${{ github.event.client_payload.text }}
+Use bash to read the event payload:
 
-## Instructions
+```bash
+cat $GITHUB_EVENT_PATH
+```
 
-1. Read the user's message above.
-2. Generate a helpful, concise response. Be conversational and friendly.
-3. Send your response back to the user via the Telegram Bot API.
+The JSON contains a `client_payload` object with:
+- `chat_id` — the Telegram chat ID to reply to
+- `text` — the user's message
+- `username` — the user's Telegram username
 
-Use the `web-fetch` tool to POST to:
+## Step 2: Generate a response
+
+Think about the user's message and compose a helpful, concise reply.
+
+## Step 3: Send the reply
+
+Use the `web-fetch` tool to POST to the Telegram Bot API:
 
 ```
 https://api.telegram.org/bot<TELEGRAM_BOT_TOKEN>/sendMessage
@@ -47,7 +55,7 @@ With this JSON body:
 
 ```json
 {
-  "chat_id": <Chat ID from above>,
+  "chat_id": <chat_id from payload>,
   "text": "<your response>",
   "parse_mode": "HTML"
 }
