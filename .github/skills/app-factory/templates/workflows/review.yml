@@ -13,18 +13,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - name: Generate scoped token
-        id: token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.APP_ID }}
-          private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          repositories: ${{ github.event.repository.name }}
-
       - name: Checkout
         uses: actions/checkout@v5
         with:
-          token: ${{ steps.token.outputs.token }}
+          token: ${{ secrets.COPILOT_PAT }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -37,7 +29,7 @@ jobs:
       - name: Count previous reviews
         id: count
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
         run: |
           PR_NUM=${{ github.event.pull_request.number }}
           COUNT=$(gh api repos/${{ github.repository }}/pulls/${PR_NUM}/reviews --jq 'length')
@@ -47,7 +39,7 @@ jobs:
       - name: Bail if too many reviews
         if: ${{ steps.count.outputs.review_count >= 3 }}
         env:
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
@@ -65,8 +57,8 @@ jobs:
       - name: Review
         if: ${{ steps.count.outputs.review_count < 3 }}
         env:
-          COPILOT_GITHUB_TOKEN: ${{ steps.token.outputs.token }}
-          GH_TOKEN: ${{ steps.token.outputs.token }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
           GH_REPO: ${{ github.repository }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID

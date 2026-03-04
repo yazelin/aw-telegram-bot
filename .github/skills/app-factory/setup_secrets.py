@@ -8,7 +8,7 @@ Output: JSON to stdout
   Success: {"ok": true, "secrets_set": 1}
   Failure: {"ok": false, "error": "..."}
 """
-import json, subprocess, sys
+import json, os, subprocess, sys
 
 def main():
     if len(sys.argv) < 3:
@@ -17,6 +17,11 @@ def main():
 
     repo = sys.argv[1]
     secrets = json.loads(sys.argv[2])
+
+    # Auto-add COPILOT_PAT if available in env
+    copilot_pat = os.environ.get("COPILOT_PAT_VALUE", "")
+    if copilot_pat:
+        secrets.append({"name": "COPILOT_PAT", "value": copilot_pat})
 
     for s in secrets:
         result = subprocess.run(

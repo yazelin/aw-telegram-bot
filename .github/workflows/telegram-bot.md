@@ -211,7 +211,7 @@ safe-inputs:
       owner:
         type: string
         required: true
-        description: "Repository owner (e.g. yazelin)"
+        description: "Repository owner (e.g. aw-apps)"
       name:
         type: string
         required: true
@@ -247,7 +247,7 @@ safe-inputs:
       repo:
         type: string
         required: true
-        description: "Repository full name (e.g. yazelin/minesweeper-web)"
+        description: "Repository full name (e.g. aw-apps/minesweeper-web)"
       files_json:
         type: string
         required: true
@@ -277,7 +277,7 @@ safe-inputs:
       repo:
         type: string
         required: true
-        description: "Repository full name (e.g. yazelin/minesweeper-web)"
+        description: "Repository full name (e.g. aw-apps/minesweeper-web)"
       issues_json:
         type: string
         required: true
@@ -329,8 +329,7 @@ safe-inputs:
           print(result.stdout)
     env:
       GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
-      APP_ID_VALUE: "${{ secrets.APP_ID }}"
-      APP_PRIVATE_KEY_VALUE: "${{ secrets.APP_PRIVATE_KEY }}"
+      COPILOT_PAT_VALUE: "${{ secrets.COPILOT_PAT }}"
     timeout: 60
 
   trigger-workflow:
@@ -443,8 +442,7 @@ secrets:
   GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
   TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
   FACTORY_PAT: ${{ secrets.FACTORY_PAT }}
-  APP_ID: ${{ secrets.APP_ID }}
-  APP_PRIVATE_KEY: ${{ secrets.APP_PRIVATE_KEY }}
+  COPILOT_PAT: ${{ secrets.COPILOT_PAT }}
 
 timeout-minutes: 15
 ---
@@ -600,7 +598,7 @@ Write these in your mind (do NOT output them to chat):
 
 Call safe-inputs in this order:
 
-1. `create-repo` with owner=`yazelin`, name=`<repo-name>`, description
+1. `create-repo` with owner=`aw-apps`, name=`<repo-name>`, description
 2. `setup-repo` with all files:
    - `README.md` (dynamic)
    - `AGENTS.md` (dynamic)
@@ -611,12 +609,10 @@ Call safe-inputs in this order:
    - `.github/skills/testing/SKILL.md` (from template)
    - `.github/skills/deploy-pages/SKILL.md` (if applicable)
 3. `create-issues` with the planned issues
-4. `setup-secrets` with `[{"name": "APP_ID", "value": "<from env>"}, {"name": "APP_PRIVATE_KEY", "value": "<from env>"}]`
-   - APP_ID is available in the APP_ID_VALUE environment variable
-   - APP_PRIVATE_KEY is available in the APP_PRIVATE_KEY_VALUE environment variable
+4. `setup-secrets` with `[]` (COPILOT_PAT is auto-added by the script)
 5. `send-telegram-message` with:
    - Summary: repo URL, number of issues created, tech stack chosen
-   - Instructions: "Send `/build yazelin/<repo-name>` to start development"
+   - Instructions: "Send `/build aw-apps/<repo-name>` to start development"
 
 ### App Factory guidelines
 
