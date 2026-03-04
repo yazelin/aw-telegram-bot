@@ -2,6 +2,11 @@ name: Implement Issue
 
 on:
   workflow_dispatch:
+  pull_request:
+    types: [closed]
+    branches: [main]
+  pull_request_review:
+    types: [submitted]
 
 concurrency:
   group: copilot-implement
@@ -11,7 +16,32 @@ jobs:
   implement:
     runs-on: ubuntu-latest
     timeout-minutes: 55
+    # Guard: only run for relevant events
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'issue-')) ||
+      (github.event_name == 'pull_request_review' &&
+       github.event.review.state == 'changes_requested' &&
+       startsWith(github.event.pull_request.head.ref, 'issue-'))
     steps:
+      - name: Validate secrets
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          COPILOT_PAT: ${{ secrets.COPILOT_PAT }}
+        run: |
+          missing=0
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error::Missing secret: COPILOT_GITHUB_TOKEN"
+            missing=1
+          fi
+          if [ -z "$COPILOT_PAT" ]; then
+            echo "::error::Missing secret: COPILOT_PAT"
+            missing=1
+          fi
+          [ "$missing" -eq 0 ] || exit 1
+
       - name: Checkout
         uses: actions/checkout@v5
         with:
@@ -26,8 +56,17 @@ jobs:
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
+          echo "::group::Trigger context"
+          echo "Event: ${{ github.event_name }}"
+          echo "Repository: ${GH_REPO}"
+          echo "::endgroup::"
+
           # CASE A: Open PR with changes requested?
+          echo "::group::Check for open PRs"
           PR_JSON=$(gh pr list --state open --json number,headRefName,reviewDecision --jq '.[0]')
+          echo "PR query result: ${PR_JSON:-none}"
+          echo "::endgroup::"
+
           if [ -n "$PR_JSON" ] && [ "$PR_JSON" != "null" ]; then
             PR_NUM=$(echo "$PR_JSON" | jq -r '.number')
             BRANCH=$(echo "$PR_JSON" | jq -r '.headRefName')
@@ -36,34 +75,52 @@ jobs:
               echo "action=fix-pr" >> "$GITHUB_OUTPUT"
               echo "pr_number=${PR_NUM}" >> "$GITHUB_OUTPUT"
               echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
-              echo "State: PR #${PR_NUM} needs fixes (branch: ${BRANCH})"
+              echo "::notice::Action: fix-pr (PR #${PR_NUM} on ${BRANCH})"
               exit 0
             else
               echo "action=skip" >> "$GITHUB_OUTPUT"
-              echo "State: PR #${PR_NUM} exists but review not requesting changes (decision: ${DECISION}), skipping"
+              echo "::notice::Action: skip (PR #${PR_NUM} decision: ${DECISION})"
               exit 0
             fi
           fi
 
           # CASE B: Open issues with copilot-task label?
+          echo "::group::Check for open issues"
           ISSUE_JSON=$(gh issue list --state open --label copilot-task --json number,title,labels \
             --jq '[.[] | select(.labels | map(.name) | (contains(["agent-stuck"]) or contains(["needs-human-review"])) | not)] | sort_by(.number) | .[0]')
+          echo "Issue query result: ${ISSUE_JSON:-none}"
+          echo "::endgroup::"
+
           if [ -n "$ISSUE_JSON" ] && [ "$ISSUE_JSON" != "null" ]; then
             ISSUE_NUM=$(echo "$ISSUE_JSON" | jq -r '.number')
             ISSUE_TITLE=$(echo "$ISSUE_JSON" | jq -r '.title')
             echo "action=implement" >> "$GITHUB_OUTPUT"
             echo "issue_number=${ISSUE_NUM}" >> "$GITHUB_OUTPUT"
             echo "issue_title=${ISSUE_TITLE}" >> "$GITHUB_OUTPUT"
-            echo "State: Implementing issue #${ISSUE_NUM}: ${ISSUE_TITLE}"
+            echo "::notice::Action: implement (Issue #${ISSUE_NUM}: ${ISSUE_TITLE})"
             exit 0
           fi
 
           # CASE C: All done
           echo "action=done" >> "$GITHUB_OUTPUT"
-          echo "State: No open PRs or actionable issues, all work complete"
+          echo "::notice::Action: done (no open PRs or actionable issues)"
           gh workflow run notify.yml --repo "${NOTIFY_REPO}" \
             -f chat_id="${NOTIFY_CHAT_ID}" \
-            -f text="✅ ${GH_REPO} all issues completed!"
+            -f text="✅ ${GH_REPO} all issues completed!" || true
+
+      - name: Configure git
+        if: steps.state.outputs.action == 'fix-pr' || steps.state.outputs.action == 'implement'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Checkout PR branch
+        if: steps.state.outputs.action == 'fix-pr'
+        run: git checkout ${{ steps.state.outputs.branch }}
+
+      - name: Create working branch
+        if: steps.state.outputs.action == 'implement'
+        run: git checkout -b issue-${{ steps.state.outputs.issue_number }}-impl
 
       - name: Setup Node.js
         if: steps.state.outputs.action == 'fix-pr' || steps.state.outputs.action == 'implement'
@@ -75,12 +132,6 @@ jobs:
         if: steps.state.outputs.action == 'fix-pr' || steps.state.outputs.action == 'implement'
         run: npm install -g @github/copilot
 
-      - name: Configure git
-        if: steps.state.outputs.action == 'fix-pr' || steps.state.outputs.action == 'implement'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
       - name: Fix PR
         if: steps.state.outputs.action == 'fix-pr'
         env:
@@ -89,7 +140,6 @@ jobs:
           GH_REPO: ${{ github.repository }}
         run: |
           PR_NUM=${{ steps.state.outputs.pr_number }}
-          BRANCH=${{ steps.state.outputs.branch }}
 
           copilot --autopilot --yolo \
             --model gpt-5.3-codex \
@@ -98,12 +148,11 @@ jobs:
               You are an autonomous coding agent working on repository ${GH_REPO}.
               Read AGENTS.md to understand the project spec and tech stack.
 
-              PR #${PR_NUM} on branch ${BRANCH} has changes requested.
-              - git checkout ${BRANCH}
+              PR #${PR_NUM} has changes requested by the reviewer.
+              You are already on the PR branch.
               - Read review comments: gh pr view ${PR_NUM} --comments
               - Address ALL review comments with code changes
-              - git add, commit, push to the same branch
-              - The push will trigger review.yml automatically
+              - git add, commit, push
             "
 
       - name: Implement issue
@@ -124,16 +173,11 @@ jobs:
 
               Implement issue #${ISSUE_NUM}.
               - Read the issue: gh issue view ${ISSUE_NUM}
-              - Create a branch: git checkout -b issue-${ISSUE_NUM}-impl
+              - You are already on branch issue-${ISSUE_NUM}-impl
               - Implement the feature following AGENTS.md
               - Write tests if applicable
               - git add, commit, push
               - Create PR: gh pr create --title 'Implement #${ISSUE_NUM}' --body 'Closes #${ISSUE_NUM}'
-
-              ERROR HANDLING:
-              If you cannot complete after reasonable effort:
-                - Comment on issue explaining what went wrong
-                - Add label: gh issue edit ${ISSUE_NUM} --add-label agent-stuck
             "
 
       - name: Handle stuck issue
@@ -145,8 +189,7 @@ jobs:
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
           ISSUE_NUM=${{ steps.state.outputs.issue_number }}
-          gh issue edit ${ISSUE_NUM} --repo ${GH_REPO} --add-label agent-stuck
+          gh issue edit ${ISSUE_NUM} --repo ${GH_REPO} --add-label agent-stuck || true
           gh workflow run notify.yml --repo "${NOTIFY_REPO}" \
             -f chat_id="${NOTIFY_CHAT_ID}" \
-            -f text="⚠️ ${GH_REPO} issue #${ISSUE_NUM} is stuck"
-          gh workflow run implement.yml
+            -f text="⚠️ ${GH_REPO} issue #${ISSUE_NUM} is stuck" || true

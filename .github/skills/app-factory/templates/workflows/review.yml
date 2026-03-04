@@ -15,10 +15,21 @@ jobs:
     timeout-minutes: 30
     if: startsWith(github.head_ref, 'issue-')
     steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          token: ${{ secrets.COPILOT_PAT }}
+      - name: Validate secrets
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
+          COPILOT_PAT: ${{ secrets.COPILOT_PAT }}
+        run: |
+          missing=0
+          if [ -z "$COPILOT_GITHUB_TOKEN" ]; then
+            echo "::error::Missing secret: COPILOT_GITHUB_TOKEN"
+            missing=1
+          fi
+          if [ -z "$COPILOT_PAT" ]; then
+            echo "::error::Missing secret: COPILOT_PAT"
+            missing=1
+          fi
+          [ "$missing" -eq 0 ] || exit 1
 
       - name: Count previous reviews
         id: count
@@ -28,7 +39,7 @@ jobs:
           PR_NUM=${{ github.event.pull_request.number }}
           COUNT=$(gh api repos/${{ github.repository }}/pulls/${PR_NUM}/reviews --jq 'length')
           echo "review_count=${COUNT}" >> "$GITHUB_OUTPUT"
-          echo "Review count for PR #${PR_NUM}: ${COUNT}"
+          echo "::notice::Review count for PR #${PR_NUM}: ${COUNT}"
 
       - name: Bail if too many reviews
         if: steps.count.outputs.review_count >= 3
@@ -42,10 +53,17 @@ jobs:
           if [ -n "$ISSUE_NUM" ]; then
             gh issue edit ${ISSUE_NUM} --add-label needs-human-review
           fi
+          gh pr close ${PR_NUM} --comment "Closing: exceeded review limit (3), needs human intervention"
           gh workflow run notify.yml --repo ${NOTIFY_REPO} \
             -f chat_id="${NOTIFY_CHAT_ID}" \
-            -f text="⚠️ ${{ github.repository }} PR #${PR_NUM} failed review 3 times, needs human review"
+            -f text="⚠️ ${{ github.repository }} PR #${PR_NUM} failed review 3 times, needs human review" || true
           echo "Bailed: too many reviews"
+
+      - name: Checkout
+        if: steps.count.outputs.review_count < 3
+        uses: actions/checkout@v5
+        with:
+          token: ${{ secrets.COPILOT_PAT }}
 
       - name: Setup Node.js
         if: steps.count.outputs.review_count < 3
@@ -63,8 +81,6 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
           GH_REPO: ${{ github.repository }}
-          NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
-          NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
           PR_NUM=${{ github.event.pull_request.number }}
 
@@ -83,10 +99,22 @@ jobs:
               IF the code is good and meets all acceptance criteria:
                 1. gh pr review ${PR_NUM} --approve -b 'LGTM - code meets requirements'
                 2. gh pr merge ${PR_NUM} --squash --delete-branch
-                3. gh workflow run implement.yml (trigger next issue)
-                4. gh workflow run notify.yml --repo ${NOTIFY_REPO} -f chat_id=${NOTIFY_CHAT_ID} -f text='🔀 ${GH_REPO} PR #${PR_NUM} merged'
 
               IF there are issues:
                 1. gh pr review ${PR_NUM} --request-changes -b '<specific feedback>'
-                2. gh workflow run implement.yml (to fix the PR)
             "
+
+      - name: Notify merge
+        if: steps.count.outputs.review_count < 3 && success()
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+          NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
+          NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          STATE=$(gh pr view ${PR_NUM} --json state --jq '.state')
+          if [ "$STATE" = "MERGED" ]; then
+            gh workflow run notify.yml --repo ${NOTIFY_REPO} \
+              -f chat_id="${NOTIFY_CHAT_ID}" \
+              -f text="🔀 ${{ github.repository }} PR #${PR_NUM} merged" || true
+          fi
