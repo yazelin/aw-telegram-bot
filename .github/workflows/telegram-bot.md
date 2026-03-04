@@ -329,6 +329,7 @@ safe-inputs:
           print(result.stdout)
     env:
       GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
+      COPILOT_TOKEN_VALUE: "${{ secrets.CHILD_COPILOT_TOKEN }}"
       COPILOT_PAT_VALUE: "${{ secrets.COPILOT_PAT }}"
     timeout: 60
 
@@ -443,6 +444,7 @@ secrets:
   TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
   FACTORY_PAT: ${{ secrets.FACTORY_PAT }}
   COPILOT_PAT: ${{ secrets.COPILOT_PAT }}
+  CHILD_COPILOT_TOKEN: ${{ secrets.CHILD_COPILOT_TOKEN }}
 
 timeout-minutes: 15
 ---

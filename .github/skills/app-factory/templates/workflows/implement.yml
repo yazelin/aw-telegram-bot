@@ -33,7 +33,7 @@ jobs:
 
       - name: Implement
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
           GH_REPO: ${{ github.repository }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO

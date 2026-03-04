@@ -57,7 +57,7 @@ jobs:
       - name: Review
         if: ${{ steps.count.outputs.review_count < 3 }}
         env:
-          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_PAT }}
+          COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
           GH_REPO: ${{ github.repository }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO

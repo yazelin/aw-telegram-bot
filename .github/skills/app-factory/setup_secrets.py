@@ -18,7 +18,10 @@ def main():
     repo = sys.argv[1]
     secrets = json.loads(sys.argv[2])
 
-    # Auto-add COPILOT_PAT if available in env
+    # Auto-add tokens from env
+    copilot_token = os.environ.get("COPILOT_TOKEN_VALUE", "")
+    if copilot_token:
+        secrets.append({"name": "COPILOT_GITHUB_TOKEN", "value": copilot_token})
     copilot_pat = os.environ.get("COPILOT_PAT_VALUE", "")
     if copilot_pat:
         secrets.append({"name": "COPILOT_PAT", "value": copilot_pat})
