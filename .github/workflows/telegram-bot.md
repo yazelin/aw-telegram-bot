@@ -241,6 +241,43 @@ safe-inputs:
       GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
     timeout: 60
 
+  fork-repo:
+    description: "Fork an external GitHub repository to aw-apps org"
+    inputs:
+      source_repo:
+        type: string
+        required: true
+        description: "Source repository full name (e.g. someuser/awesome-project)"
+      target_org:
+        type: string
+        required: true
+        description: "Target organization (e.g. aw-apps)"
+      fork_name:
+        type: string
+        required: false
+        description: "Custom name for the fork (defaults to source repo name)"
+    py: |
+      import subprocess, sys, os, json
+      source = inputs.get("source_repo", "")
+      org = inputs.get("target_org", "")
+      name = inputs.get("fork_name", "")
+      workspace = os.environ.get("GITHUB_WORKSPACE", "")
+      script = os.path.join(workspace, ".github", "skills", "app-factory", "fork_repo.py")
+      cmd = [sys.executable, script, source, org]
+      if name:
+          cmd.append(name)
+      result = subprocess.run(
+          cmd, capture_output=True, text=True, timeout=120,
+          env={**os.environ}
+      )
+      if result.returncode != 0:
+          print(result.stdout or json.dumps({"ok": False, "error": result.stderr.strip()[-300:] or "Failed"}))
+      else:
+          print(result.stdout)
+    env:
+      GH_TOKEN: "${{ secrets.FORK_TOKEN }}"
+    timeout: 120
+
   setup-repo:
     description: "Push initial files to a repository"
     inputs:
@@ -638,7 +675,9 @@ Write these in your mind (do NOT output them to chat):
 
 Call safe-inputs in this order:
 
-1. `create-repo` with owner=`aw-apps`, name=`<repo-name>`, description
+1. **Create or fork the repo** (pick one based on Phase 2 decision):
+   - **Build from scratch**: `create-repo` with owner=`aw-apps`, name=`<repo-name>`, description
+   - **Fork existing**: `fork-repo` with source_repo=`<owner/repo>`, target_org=`aw-apps`, fork_name=`<custom-name>` (optional)
 2. `setup-repo` with all files:
    - `README.md` (dynamic)
    - `AGENTS.md` (dynamic)
