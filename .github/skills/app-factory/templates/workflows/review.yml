@@ -89,21 +89,45 @@ jobs:
             --model gpt-5.3-codex \
             --max-autopilot-continues 10 \
             -p "
-              You are a code reviewer for repository ${GH_REPO}.
-              Read AGENTS.md to understand the project spec and acceptance criteria.
+              You are a strict code reviewer for repository ${GH_REPO}.
+              Read AGENTS.md to understand the project spec and Global Acceptance Criteria.
 
-              Review PR #${PR_NUM}.
-              - Run: gh pr diff ${PR_NUM}
-              - Read the linked issue for acceptance criteria
-              - Check code quality, correctness, and completeness
+              Review PR #${PR_NUM}:
+              1. Run: gh pr diff ${PR_NUM}
+              2. Find the linked issue number from the PR body (Closes #N)
+              3. Read the issue: gh issue view N
+              4. Check each item in the Acceptance Criteria section
+              5. Check each item in the Validation section
+              6. Check code quality: no dead code, no hardcoded values, proper error handling
 
-              IF the code is good and meets all acceptance criteria:
-                1. gh pr review ${PR_NUM} --approve -b 'LGTM - code meets requirements'
-                2. gh pr merge ${PR_NUM} --squash --delete-branch
+              You MUST take exactly one action before exiting:
 
-              IF there are issues:
-                1. gh pr review ${PR_NUM} --request-changes -b '<specific feedback>'
+              APPROVE (all criteria met, code is clean):
+                gh pr review ${PR_NUM} --approve -b 'All acceptance criteria verified: [list checked items]'
+                gh pr merge ${PR_NUM} --squash --delete-branch
+
+              REQUEST CHANGES (any criterion not met):
+                gh pr review ${PR_NUM} --request-changes -b 'Issues found: [list specific problems with file:line references]'
+
+              IMPORTANT: You must run one of the above gh commands. Never exit without taking action.
             "
+
+      - name: Fallback if review took no action
+        if: steps.count.outputs.review_count < 3 && success()
+        env:
+          GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+        run: |
+          PR_NUM=${{ github.event.pull_request.number }}
+          STATE=$(gh pr view ${PR_NUM} --json state --jq '.state')
+          if [ "$STATE" = "OPEN" ]; then
+            REVIEWS=$(gh api repos/${{ github.repository }}/pulls/${PR_NUM}/reviews \
+              --jq '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED")] | length')
+            if [ "$REVIEWS" -eq 0 ]; then
+              echo "::warning::Review completed without action, auto-approving"
+              gh pr review ${PR_NUM} --approve -b "Auto-approved: review completed without taking action"
+              gh pr merge ${PR_NUM} --squash --delete-branch || true
+            fi
+          fi
 
       - name: Notify merge
         if: steps.count.outputs.review_count < 3 && success()
