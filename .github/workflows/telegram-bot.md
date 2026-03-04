@@ -502,8 +502,10 @@ create app projects, trigger builds, and send messages to repos.
 ## Instructions
 
 1. Check the message for a command prefix:
-   - `/app <description>` → App Factory mode
+   - `/app <description>` → App Factory mode (build from scratch)
+   - `/app fork:<owner/repo> <description>` → App Factory mode (fork and customize)
    - `/build <owner/repo>` → Build trigger mode
+   - `/issue <owner/repo> <description>` → Create issue on existing repo
    - `/msg <owner/repo>#<number> <message>` → Message relay mode
    - `/research <topic>` → Research mode
    - `/draw <description>` → Image generation mode
@@ -597,11 +599,17 @@ Use this when the user sends `/app <description>` to create a new app project.
 
 ### Phase 2: Deep Research (Diverge)
 
-1. Use `web-search` to find 2-3 similar open-source projects
+**If the user specified `fork:<owner/repo>`:** skip search, go directly to step 2 with that repo. The decision is already "fork".
+
+**Otherwise:**
+1. Use `web-search` to find 2-3 similar open-source projects (search in both English and the user's language)
 2. Use `web-fetch` to read their README and file structure
 3. Extract: typical modules, file organization, feature breakdown
 4. Note which features are tightly coupled vs independent
-5. Decide: build from scratch, reference an existing project, or suggest a fork
+5. Decide using this criteria:
+   - **Fork** if a found project implements ≥60% of the requested features AND is a static site or simple web app → use `fork-repo` in Phase 5
+   - **Build from scratch** if no good match or the found projects are too complex/different → use `create-repo` in Phase 5
+   - **Reference** if found projects are useful as inspiration but not directly forkable → use `create-repo` but cite them in AGENTS.md
 
 ### Phase 3: Technical decisions + Define "done"
 
@@ -721,6 +729,52 @@ Use this when the user sends `/build <owner/repo>`.
 
 - The repo must already exist (created by `/app`)
 - If the repo doesn't exist, explain that they need to run `/app` first
+
+## Issue creation workflow
+
+Use this when the user sends `/issue <owner/repo> <description>` to create a new issue on an existing repo.
+
+### Steps:
+
+1. Parse the command:
+   - Extract repo (e.g. `aw-apps/focus-pomodoro-web`)
+   - Extract description (everything after the repo name)
+2. Research the existing repo:
+   - Use `web-fetch` to read `https://raw.githubusercontent.com/<repo>/main/AGENTS.md`
+   - Use `web-fetch` to read `https://raw.githubusercontent.com/<repo>/main/README.md`
+   - Check existing issues: use the GitHub API or `post-comment` tool to understand what's already built
+3. If needed, use `web-search` to research how to implement the requested feature
+4. Write a structured issue body following the same format as App Factory:
+
+   ## Objective
+   [What this issue delivers]
+
+   ## Context
+   [How it fits into the existing project]
+
+   ## Approach
+   1. [Step-by-step plan]
+
+   ## Files
+   - Create/Modify: `exact/path/to/file`
+
+   ## Acceptance Criteria
+   - [ ] [Verifiable criterion]
+
+   ## Validation
+   - [Exact steps to verify]
+
+5. Call `create-issues` with repo and the single issue (include `copilot-task` label)
+6. Send confirmation via `send-telegram-message`:
+   "📋 已在 <repo> 建立 issue #N: <title>\n發送 `/build <repo>` 開始開發"
+
+### Issue creation guidelines
+
+- The repo must already exist
+- Read AGENTS.md to understand the project's tech stack and conventions
+- The issue should be completable by Copilot CLI within the 55-minute timeout
+- If the feature is too large, split into 2-3 issues and explain the sequence
+- Issue body must follow the structured format (Objective/Context/Approach/Files/AC/Validation)
 
 ## Message relay workflow
 
