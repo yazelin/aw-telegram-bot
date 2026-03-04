@@ -558,10 +558,13 @@ Use this when the user sends `/app <description>` to create a new app project.
    - Is it technically achievable with standard web technologies?
 3. If NOT feasible, send a detailed explanation via `send-telegram-message` and stop
 
-### Phase 2: Search for existing solutions
+### Phase 2: Deep Research (Diverge)
 
-1. Use `web-search` to find relevant open-source projects or libraries
-2. Decide: build from scratch, reference an existing project, or suggest a fork
+1. Use `web-search` to find 2-3 similar open-source projects
+2. Use `web-fetch` to read their README and file structure
+3. Extract: typical modules, file organization, feature breakdown
+4. Note which features are tightly coupled vs independent
+5. Decide: build from scratch, reference an existing project, or suggest a fork
 
 ### Phase 3: Technical decisions (MVP principles)
 
