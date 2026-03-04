@@ -147,13 +147,15 @@ jobs:
             --max-autopilot-continues 30 \
             -p "
               You are an autonomous coding agent working on repository ${GH_REPO}.
-              Read AGENTS.md to understand the project spec and tech stack.
+              Read AGENTS.md to understand the project spec and acceptance criteria.
 
               PR #${PR_NUM} has changes requested by the reviewer.
               You are already on the PR branch.
-              - Read review comments: gh pr view ${PR_NUM} --comments
-              - Address ALL review comments with code changes
-              - git add, commit, push
+              1. Read review comments: gh pr view ${PR_NUM} --comments
+              2. Read the linked issue for the Acceptance Criteria and Validation sections
+              3. Address ALL review comments with code changes
+              4. Re-verify using the Validation section
+              5. git add, commit, push
             "
 
       - name: Implement issue
@@ -170,15 +172,20 @@ jobs:
             --max-autopilot-continues 30 \
             -p "
               You are an autonomous coding agent working on repository ${GH_REPO}.
-              Read AGENTS.md to understand the project spec and tech stack.
+              Read AGENTS.md to understand the project spec, tech stack, and Global Acceptance Criteria.
 
-              Implement issue #${ISSUE_NUM}.
-              - Read the issue: gh issue view ${ISSUE_NUM}
-              - You are already on branch issue-${ISSUE_NUM}-impl
-              - Implement the feature following AGENTS.md
-              - Write tests if applicable
-              - git add, commit, push
-              - Create PR: gh pr create --title 'Implement #${ISSUE_NUM}' --body 'Closes #${ISSUE_NUM}'
+              Implement issue #${ISSUE_NUM}:
+              1. Read the issue: gh issue view ${ISSUE_NUM}
+              2. The issue has these sections: Objective, Context, Approach, Files, Acceptance Criteria, Validation
+              3. Follow the Approach steps in order — commit after each step
+              4. Create/modify only the files listed in the Files section
+              5. After all steps, verify using the Validation section
+              6. Confirm each Acceptance Criteria checkbox is met
+              7. You are already on branch issue-${ISSUE_NUM}-impl
+              8. git add, commit, push
+              9. Create PR: gh pr create --title 'Implement #${ISSUE_NUM}' --body 'Closes #${ISSUE_NUM}'
+
+              If you cannot meet an acceptance criterion, explain why in the PR body.
             "
 
       - name: Handle stuck issue
