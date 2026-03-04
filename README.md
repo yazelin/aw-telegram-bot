@@ -4,6 +4,10 @@
 
 ![Architecture](docs/architecture.png)
 
+### 實際運作截圖
+
+![Demo](docs/demo.png)
+
 ## 運作方式
 
 ```
