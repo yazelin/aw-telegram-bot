@@ -45,6 +45,7 @@ jobs:
         if: steps.count.outputs.review_count >= 3
         env:
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
@@ -54,7 +55,7 @@ jobs:
             gh issue edit ${ISSUE_NUM} --add-label needs-human-review
           fi
           gh pr close ${PR_NUM} --comment "Closing: exceeded review limit (3), needs human intervention"
-          gh workflow run notify.yml --repo ${NOTIFY_REPO} \
+          GH_TOKEN="${NOTIFY_TOKEN}" gh workflow run notify.yml --repo ${NOTIFY_REPO} \
             -f chat_id="${NOTIFY_CHAT_ID}" \
             -f text="⚠️ ${{ github.repository }} PR #${PR_NUM} failed review 3 times, needs human review" || true
           echo "Bailed: too many reviews"
@@ -108,13 +109,14 @@ jobs:
         if: steps.count.outputs.review_count < 3 && success()
         env:
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
           PR_NUM=${{ github.event.pull_request.number }}
           STATE=$(gh pr view ${PR_NUM} --json state --jq '.state')
           if [ "$STATE" = "MERGED" ]; then
-            gh workflow run notify.yml --repo ${NOTIFY_REPO} \
+            GH_TOKEN="${NOTIFY_TOKEN}" gh workflow run notify.yml --repo ${NOTIFY_REPO} \
               -f chat_id="${NOTIFY_CHAT_ID}" \
               -f text="🔀 ${{ github.repository }} PR #${PR_NUM} merged" || true
           fi

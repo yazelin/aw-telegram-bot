@@ -331,6 +331,7 @@ safe-inputs:
       GH_TOKEN: "${{ secrets.FACTORY_PAT }}"
       COPILOT_TOKEN_VALUE: "${{ secrets.CHILD_COPILOT_TOKEN }}"
       COPILOT_PAT_VALUE: "${{ secrets.COPILOT_PAT }}"
+      NOTIFY_TOKEN_VALUE: "${{ secrets.NOTIFY_TOKEN }}"
     timeout: 60
 
   trigger-workflow:

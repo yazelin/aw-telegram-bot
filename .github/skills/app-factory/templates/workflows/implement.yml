@@ -53,6 +53,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
           GH_REPO: ${{ github.repository }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
@@ -104,7 +105,7 @@ jobs:
           # CASE C: All done
           echo "action=done" >> "$GITHUB_OUTPUT"
           echo "::notice::Action: done (no open PRs or actionable issues)"
-          gh workflow run notify.yml --repo "${NOTIFY_REPO}" \
+          GH_TOKEN="${NOTIFY_TOKEN}" gh workflow run notify.yml --repo "${NOTIFY_REPO}" \
             -f chat_id="${NOTIFY_CHAT_ID}" \
             -f text="✅ ${GH_REPO} all issues completed!" || true
 
@@ -184,12 +185,13 @@ jobs:
         if: failure() && steps.state.outputs.action == 'implement'
         env:
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
+          NOTIFY_TOKEN: ${{ secrets.NOTIFY_TOKEN }}
           GH_REPO: ${{ github.repository }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
           NOTIFY_CHAT_ID: PLACEHOLDER_CHAT_ID
         run: |
           ISSUE_NUM=${{ steps.state.outputs.issue_number }}
           gh issue edit ${ISSUE_NUM} --repo ${GH_REPO} --add-label agent-stuck || true
-          gh workflow run notify.yml --repo "${NOTIFY_REPO}" \
+          GH_TOKEN="${NOTIFY_TOKEN}" gh workflow run notify.yml --repo "${NOTIFY_REPO}" \
             -f chat_id="${NOTIFY_CHAT_ID}" \
             -f text="⚠️ ${GH_REPO} issue #${ISSUE_NUM} is stuck" || true

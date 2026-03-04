@@ -60,7 +60,15 @@ def main():
             print(json.dumps({"ok": False, "error": f"Push failed: {result.stderr.strip()[-300:]}"}))
             sys.exit(1)
 
-    print(json.dumps({"ok": True, "files_pushed": len(files)}))
+    # Enable GitHub Pages (deploy from main branch root)
+    result = subprocess.run(
+        ["gh", "api", f"repos/{repo}/pages", "-X", "POST",
+         "-f", "build_type=legacy", "-f", "source[branch]=main", "-f", "source[path]=/"],
+        capture_output=True, text=True
+    )
+    pages_enabled = result.returncode == 0
+
+    print(json.dumps({"ok": True, "files_pushed": len(files), "pages_enabled": pages_enabled}))
 
 if __name__ == "__main__":
     main()

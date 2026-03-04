@@ -25,6 +25,9 @@ def main():
     copilot_pat = os.environ.get("COPILOT_PAT_VALUE", "")
     if copilot_pat:
         secrets.append({"name": "COPILOT_PAT", "value": copilot_pat})
+    notify_token = os.environ.get("NOTIFY_TOKEN_VALUE", "")
+    if notify_token:
+        secrets.append({"name": "NOTIFY_TOKEN", "value": notify_token})
 
     for s in secrets:
         result = subprocess.run(
