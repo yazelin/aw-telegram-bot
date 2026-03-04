@@ -41,7 +41,11 @@ def main():
             with open(filepath, "w") as fh:
                 fh.write(f["content"])
 
-        # Git add, commit, push
+        # Git add, commit, push (use gh auth token for push authentication)
+        token = os.environ.get("FACTORY_PAT") or os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN", "")
+        subprocess.run(["git", "remote", "set-url", "origin",
+                       f"https://x-access-token:{token}@github.com/{repo}.git"],
+                       cwd=tmpdir, capture_output=True)
         subprocess.run(["git", "config", "user.name", "github-actions[bot]"],
                        cwd=tmpdir, capture_output=True)
         subprocess.run(["git", "config", "user.email",
