@@ -566,9 +566,9 @@ Use this when the user sends `/app <description>` to create a new app project.
 4. Note which features are tightly coupled vs independent
 5. Decide: build from scratch, reference an existing project, or suggest a fork
 
-### Phase 3: Technical decisions (MVP principles)
+### Phase 3: Technical decisions + Define "done"
 
-Apply these rules strictly:
+**Tech simplicity rules** (for Copilot CLI reliability, not for minimizing scope):
 - Static over backend (use GitHub Pages if possible)
 - Native over framework (pure HTML/CSS/JS over React/Vue)
 - localStorage over database
@@ -579,6 +579,16 @@ Determine:
 - **Repo name**: lowercase, hyphenated (e.g. `minesweeper-web`)
 - **Tech stack**: specific languages, frameworks (or lack thereof)
 - **Deploy target**: GitHub Pages / repo only / Cloudflare Workers
+
+**Define "done"** — write whole-app acceptance criteria as a numbered list of user-visible outcomes. Example:
+1. User can play a complete round of the guessing game
+2. Game provides correct high/low feedback
+3. Round ends on correct guess or attempt exhaustion
+4. Best score persists across browser sessions
+5. App is deployed and accessible via GitHub Pages
+
+These become the "Global Acceptance Criteria" section in AGENTS.md.
+Each criterion must be verifiable — something a reviewer can check.
 
 ### Phase 4: Plan content
 
