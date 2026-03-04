@@ -179,11 +179,14 @@ jobs:
               2. The issue has these sections: Objective, Context, Approach, Files, Acceptance Criteria, Validation
               3. Follow the Approach steps in order — commit after each step
               4. Create/modify only the files listed in the Files section
-              5. After all steps, verify using the Validation section
-              6. Confirm each Acceptance Criteria checkbox is met
-              7. You are already on branch issue-${ISSUE_NUM}-impl
-              8. git add, commit, push
-              9. Create PR: gh pr create --title 'Implement #${ISSUE_NUM}' --body 'Closes #${ISSUE_NUM}'
+              5. After all steps, run these pre-push checks:
+                 - grep -rn 'from ['\''\"]\w' --include='*.js' --include='*.ts' to find bare module imports (must use relative or CDN URLs, not bare specifiers like 'three')
+                 - Fix any bare imports before pushing
+              6. Verify using the Validation section
+              7. Confirm each Acceptance Criteria checkbox is met
+              8. You are already on branch issue-${ISSUE_NUM}-impl
+              9. git add, commit, push
+              10. Create PR: gh pr create --title 'Implement #${ISSUE_NUM}' --body 'Closes #${ISSUE_NUM}'
 
               If you cannot meet an acceptance criterion, explain why in the PR body.
             "

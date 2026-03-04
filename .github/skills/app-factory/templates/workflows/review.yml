@@ -76,6 +76,17 @@ jobs:
         if: steps.count.outputs.review_count < 3
         run: npm install -g @github/copilot
 
+      - name: Cache Playwright
+        if: steps.count.outputs.review_count < 3
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}
+
+      - name: Install Playwright Chromium
+        if: steps.count.outputs.review_count < 3
+        run: npx playwright install chromium --with-deps
+
       - name: Review
         if: steps.count.outputs.review_count < 3
         env:
@@ -97,8 +108,13 @@ jobs:
               2. Find the linked issue number from the PR body (Closes #N)
               3. Read the issue: gh issue view N
               4. Check each item in the Acceptance Criteria section
-              5. Check each item in the Validation section
-              6. Check code quality: no dead code, no hardcoded values, proper error handling
+              5. Check code quality: no dead code, no hardcoded values, proper error handling
+              6. Browser smoke test (if index.html exists):
+                 - Run: python3 -m http.server 8000 &
+                 - Write a small Playwright script that navigates to http://localhost:8000, waits 3 seconds, and collects any console errors
+                 - Run it with: node your_script.js (Playwright Chromium is pre-installed)
+                 - If any console errors are found, this is a blocking issue — REQUEST CHANGES
+                 - Kill the server when done: kill %1
 
               You MUST take exactly one action before exiting:
 
