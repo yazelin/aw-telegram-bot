@@ -123,9 +123,9 @@ jobs:
             REVIEWS=$(gh api repos/${{ github.repository }}/pulls/${PR_NUM}/reviews \
               --jq '[.[] | select(.state == "APPROVED" or .state == "CHANGES_REQUESTED")] | length')
             if [ "$REVIEWS" -eq 0 ]; then
-              echo "::warning::Review completed without action, auto-approving"
-              gh pr review ${PR_NUM} --approve -b "Auto-approved: review completed without taking action"
-              gh pr merge ${PR_NUM} --squash --delete-branch || true
+              echo "::warning::Review completed without action, auto-merging"
+              gh pr merge ${PR_NUM} --squash --delete-branch --admin \
+                --body "Auto-merged: review completed without taking action" || true
             fi
           fi
 
