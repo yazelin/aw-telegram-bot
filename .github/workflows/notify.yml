@@ -31,7 +31,13 @@ jobs:
           CHAT_ID: ${{ inputs.chat_id }}
           TEXT: ${{ inputs.text }}
         run: |
-          curl -sf -X POST \
+          RESPONSE=$(curl -s -X POST \
             "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
-            -d "{\"chat_id\": \"${CHAT_ID}\", \"text\": $(echo "$TEXT" | jq -Rs .)}"
+            -d "{\"chat_id\": \"${CHAT_ID}\", \"text\": $(echo "$TEXT" | jq -Rs .)}")
+          echo "$RESPONSE"
+          OK=$(echo "$RESPONSE" | jq -r '.ok')
+          if [ "$OK" != "true" ]; then
+            echo "::error::Telegram API error: $(echo "$RESPONSE" | jq -r '.description // "unknown"')"
+            exit 1
+          fi
