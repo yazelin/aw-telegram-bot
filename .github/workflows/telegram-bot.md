@@ -590,22 +590,46 @@ Determine:
 These become the "Global Acceptance Criteria" section in AGENTS.md.
 Each criterion must be verifiable — something a reviewer can check.
 
-### Phase 4: Plan content
+### Phase 4: Plan backwards (Converge)
 
 Write these in your mind (do NOT output them to chat):
 
 1. **README.md**: Project title, description, tech stack, how to run locally, deploy info
 2. **AGENTS.md**: Full project spec including:
-   - Project goal
+   - Project goal and description
    - Tech stack with specific versions/choices
    - Architecture overview
-   - References to open-source projects (if any)
-   - Package usage principles
-   - Acceptance criteria for the whole project
-3. **Issue list**: 3-8 issues, each with:
-   - Clear title
-   - Detailed body with acceptance criteria
-   - Ordered by implementation dependency (foundational first)
+   - References to open-source projects found in Phase 2
+   - Global Acceptance Criteria (from Phase 3)
+3. **Issue list** — plan backwards from acceptance criteria:
+   a. List all features needed to meet the acceptance criteria
+   b. Map dependencies: if A depends on B, mark them as coupled
+   c. Merge tightly-coupled features into single issues
+   d. Target 2-5 issues total, sequenced: foundation → implementation → polish/deploy
+   e. Each issue body MUST follow this structure:
+
+      ## Objective
+      [What this issue delivers in user-visible terms]
+
+      ## Context
+      [Why this is needed, what depends on it]
+
+      ## Approach
+      1. [Step-by-step plan with specific actions]
+      2. [Each step should be one commit]
+
+      ## Files
+      - Create: `exact/path/to/file.js`
+      - Modify: `exact/path/to/existing.js`
+
+      ## Acceptance Criteria
+      - [ ] [Verifiable criterion 1]
+      - [ ] [Verifiable criterion 2]
+
+      ## Validation
+      - [Exact steps to verify this works after completion]
+      - [e.g. "Open index.html in browser, click Play, verify game starts"]
+
 4. **Skills selection**: Pick from available templates:
    - Always include: `issue-workflow`, `code-standards`, `testing`
    - If deploying to Pages: include `deploy-pages`
