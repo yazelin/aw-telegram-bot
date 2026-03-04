@@ -65,7 +65,7 @@ jobs:
         run: |
           PR_NUM=${{ github.event.pull_request.number }}
 
-          copilot --autopilot \
+          copilot --autopilot --yolo \
             --model gpt-5.3-codex \
             --max-autopilot-continues 10 \
             -p "
