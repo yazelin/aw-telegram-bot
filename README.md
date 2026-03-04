@@ -376,16 +376,16 @@ aw-telegram-bot/
 
 ## 開發歷程
 
-> 完整系列文章：[aw-telegram-bot 系列目錄](https://yazelin.github.io/2026/03/04/aw-telegram-bot-series-index/)
+> 完整系列文章：[aw-telegram-bot 系列目錄](https://yazelin.github.io/index/2026/03/04/aw-telegram-bot-series-index.html)
 
 | 版本 | 功能 | 主要變更 | Blog |
 |------|------|----------|------|
-| v1 | 基本聊天 | Telegram ↔ Copilot 對話 | [踩了 6 個坑才走通](https://yazelin.github.io/2026/03/03/aw-telegram-bot-v1-basic-chatbot/) |
-| v2 | 圖片生成 | Nanobanana + Gemini 整合 | [踩了 Docker container 的坑](https://yazelin.github.io/2026/03/03/aw-telegram-bot-v2-image-generation/) |
-| v3 | 研究模式 | Tavily 搜尋 + web-fetch | [踩了 concurrency 的坑](https://yazelin.github.io/2026/03/03/aw-telegram-bot-v3-research-mode/) |
-| v4 | 影片下載 | yt-dlp 影片下載 | [影片下載 + 使用者白名單](https://yazelin.github.io/2026/03/04/aw-telegram-bot-v4-video-download/) |
-| v5 | App Factory | 端到端 Repo 建立 + 自動化開發 | [用 Telegram 指令讓 AI 自動建網站](https://yazelin.github.io/2026/03/04/aw-telegram-bot-v5-app-factory/) |
-| v6 | 智慧規劃 | Fork 支援、結構化 Issue、Playwright 測試、`/issue` 指令 | [省一半 Premium Request](https://yazelin.github.io/2026/03/04/aw-telegram-bot-v6-smart-planning/) |
+| v1 | 基本聊天 | Telegram ↔ Copilot 對話 | [踩了 6 個坑才走通](https://yazelin.github.io/ai/2026/03/03/aw-telegram-bot-v1-basic-chatbot.html) |
+| v2 | 圖片生成 | Nanobanana + Gemini 整合 | [踩了 Docker container 的坑](https://yazelin.github.io/ai/2026/03/03/aw-telegram-bot-v2-image-generation.html) |
+| v3 | 研究模式 | Tavily 搜尋 + web-fetch | [踩了 concurrency 的坑](https://yazelin.github.io/ai/2026/03/03/aw-telegram-bot-v3-research-mode.html) |
+| v4 | 影片下載 | yt-dlp 影片下載 | [影片下載 + 使用者白名單](https://yazelin.github.io/ai/2026/03/04/aw-telegram-bot-v4-video-download.html) |
+| v5 | App Factory | 端到端 Repo 建立 + 自動化開發 | [用 Telegram 指令讓 AI 自動建網站](https://yazelin.github.io/ai/2026/03/04/aw-telegram-bot-v5-app-factory.html) |
+| v6 | 智慧規劃 | Fork 支援、結構化 Issue、Playwright 測試、`/issue` 指令 | [省一半 Premium Request](https://yazelin.github.io/ai/2026/03/04/aw-telegram-bot-v6-smart-planning.html) |
 
 ## 授權
 
