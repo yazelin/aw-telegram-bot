@@ -69,18 +69,77 @@
 | `yazelin/aw-telegram-bot` | **父 Repo** | 託管機器人工作流程、App Factory 技能與範本 |
 | `aw-apps/*` | **子 Repo** | 自動建立的網頁應用 Repo，各自擁有獨立 CI/CD |
 
-### Token 與 Secret 架構
+### 環境變數與 Secret 架構
 
-| Secret | 位置 | 用途 |
-|--------|------|------|
-| `TELEGRAM_BOT_TOKEN` | 父 Repo + CF Worker | 收發 Telegram 訊息 |
-| `TELEGRAM_SECRET` | CF Worker | Webhook 簽名驗證 |
-| `GITHUB_TOKEN` | CF Worker | 透過 API 觸發父工作流程 |
-| `COPILOT_GITHUB_TOKEN` | 父 Repo → 子 Repo | Copilot CLI 認證 |
-| `COPILOT_PAT` | 父 Repo → 子 Repo | Git push、建立 PR、合併 |
-| `FACTORY_PAT` | 父 Repo | 在 aw-apps 組織建立 Repo、設定 Secret |
-| `FORK_TOKEN` | 父 Repo | Fork 外部 Repo（Classic PAT，需 `public_repo` 權限） |
-| `NOTIFY_TOKEN` | 子 Repo → 父 Repo | 回呼通知至 Telegram |
+系統的環境變數分佈在四個地方：Cloudflare Worker、父 Repo（GitHub Actions）、子 Repo（自動設定）、MCP 伺服器。
+
+#### Cloudflare Worker
+
+透過 `wrangler secret put` 或 `wrangler.toml` 設定。
+
+| 變數 | 類型 | 用途 |
+|------|------|------|
+| `TELEGRAM_BOT_TOKEN` | Secret | Telegram Bot API Token，用於註冊 Webhook |
+| `TELEGRAM_SECRET` | Secret | Webhook 簽名驗證（`X-Telegram-Bot-Api-Secret-Token` header） |
+| `GITHUB_TOKEN` | Secret | 呼叫 GitHub API 觸發父 Repo 工作流程 |
+| `GITHUB_OWNER` | Secret | GitHub 帳號或組織名稱（例如 `yazelin`） |
+| `GITHUB_REPO` | Secret | 父 Repo 名稱（例如 `aw-telegram-bot`） |
+| `ALLOWED_USERS` | Var | 允許使用的 Telegram User ID（逗號分隔） |
+| `ALLOWED_CHATS` | Var | 允許使用的 Telegram Chat ID（逗號分隔） |
+
+#### 父 Repo（GitHub Actions Secret）
+
+在 GitHub Repo Settings → Secrets and variables → Actions 中設定。
+
+| Secret | 用途 | Token 類型 |
+|--------|------|------------|
+| `TELEGRAM_BOT_TOKEN` | 傳送 Telegram 訊息（回覆、通知） | Telegram Bot API Token |
+| `GEMINI_API_KEY` | Nanobanana MCP 圖片生成（Google Gemini） | Google AI API Key |
+| `TAVILY_API_KEY` | Tavily MCP 網路搜尋與內容擷取 | Tavily API Key |
+| `FACTORY_PAT` | 在 `aw-apps` 組織建立 Repo、設定 Secret、觸發工作流程 | Fine-grained PAT（需 `aw-apps` 組織權限） |
+| `FORK_TOKEN` | Fork 外部 Repo 至 `aw-apps` 組織 | Classic PAT（需 `public_repo` 權限） |
+| `COPILOT_PAT` | 子 Repo 的 Git push、建立 PR、合併、Code Review | Fine-grained PAT |
+| `CHILD_COPILOT_TOKEN` | 傳遞至子 Repo 作為 `COPILOT_GITHUB_TOKEN` | Copilot CLI Token |
+| `NOTIFY_TOKEN` | 傳遞至子 Repo，用於回呼 `notify.yml` | Fine-grained PAT（需父 Repo `actions:write`） |
+
+#### 子 Repo（自動傳遞）
+
+由 `setup-secrets` Safe-Input 自動從父 Repo 設定至子 Repo，**不需手動設定**。
+
+| Secret（子 Repo） | 來源（父 Repo） | 用途 |
+|-------------------|----------------|------|
+| `COPILOT_GITHUB_TOKEN` | `CHILD_COPILOT_TOKEN` | Copilot CLI 認證（`implement.yml`、`review.yml`） |
+| `COPILOT_PAT` | `COPILOT_PAT` | Git push、建立/合併 PR |
+| `NOTIFY_TOKEN` | `NOTIFY_TOKEN` | 完成/失敗時回呼父 Repo 的 `notify.yml` |
+
+#### MCP 伺服器環境變數
+
+在 `telegram-bot.md` 中設定，執行時自動注入。
+
+| 變數 | 值 | 用途 |
+|------|----|------|
+| `NANOBANANA_GEMINI_API_KEY` | `${{ secrets.GEMINI_API_KEY }}` | Gemini API 認證 |
+| `NANOBANANA_MODEL` | `gemini-3-pro-image-preview` | 主要圖片生成模型 |
+| `NANOBANANA_FALLBACK_MODELS` | `gemini-3.1-flash-image-preview,gemini-2.5-flash-image` | 備用模型（主模型 503 時切換） |
+| `NANOBANANA_TIMEOUT` | `120` | API 請求逾時（秒） |
+| `NANOBANANA_OUTPUT_DIR` | `/tmp/nanobanana-output` | 圖片輸出目錄 |
+| `NANOBANANA_DEBUG` | `1` | 除錯模式 |
+
+#### Secret 流向圖
+
+```
+Cloudflare Worker                     父 Repo (aw-telegram-bot)                子 Repo (aw-apps/*)
+┌────────────────────┐               ┌────────────────────────┐              ┌─────────────────────┐
+│ TELEGRAM_BOT_TOKEN │               │ TELEGRAM_BOT_TOKEN     │              │                     │
+│ TELEGRAM_SECRET    │               │ GEMINI_API_KEY         │              │                     │
+│ GITHUB_TOKEN ──────┼── 觸發 ──────→│ TAVILY_API_KEY         │              │                     │
+│ GITHUB_OWNER       │               │ FACTORY_PAT ───────────┼── 建 Repo ──→│                     │
+│ GITHUB_REPO        │               │ FORK_TOKEN ────────────┼── Fork ─────→│                     │
+│ ALLOWED_USERS      │               │ CHILD_COPILOT_TOKEN ───┼── 傳遞 ─────→│ COPILOT_GITHUB_TOKEN│
+│ ALLOWED_CHATS      │               │ COPILOT_PAT ───────────┼── 傳遞 ─────→│ COPILOT_PAT         │
+└────────────────────┘               │ NOTIFY_TOKEN ──────────┼── 傳遞 ─────→│ NOTIFY_TOKEN ───────┼── 回呼
+                                     └────────────────────────┘              └─────────────────────┘
+```
 
 ## App Factory 流水線
 
@@ -265,13 +324,20 @@ aw-telegram-bot/
    cd worker && wrangler deploy
    ```
 
-2. **設定 Worker Secret**
+2. **設定 Worker Secret 與變數**
    ```bash
+   # Secret（敏感資料）
    wrangler secret put TELEGRAM_BOT_TOKEN
    wrangler secret put TELEGRAM_SECRET
    wrangler secret put GITHUB_TOKEN
    wrangler secret put GITHUB_OWNER
    wrangler secret put GITHUB_REPO
+   ```
+   在 `wrangler.toml` 中設定白名單：
+   ```toml
+   [vars]
+   ALLOWED_USERS = "你的_Telegram_User_ID"
+   ALLOWED_CHATS = ""
    ```
 
 3. **註冊 Telegram Webhook**
@@ -279,12 +345,24 @@ aw-telegram-bot/
    https://<worker-url>/register?token=<your-TELEGRAM_SECRET>
    ```
 
-4. **設定 GitHub Repo Secret**
-   - `TELEGRAM_BOT_TOKEN` — Telegram Bot API Token
-   - `FACTORY_PAT` — aw-apps 組織的 Fine-grained PAT
-   - `FORK_TOKEN` — 具備 `public_repo` 權限的 Classic PAT（用於 Fork）
-   - `COPILOT_GITHUB_TOKEN` — Copilot 認證
-   - `COPILOT_PAT` — 子 Repo 的 Git 操作
+4. **設定 GitHub Repo Secret**（父 Repo）
+   ```bash
+   # Telegram
+   gh secret set TELEGRAM_BOT_TOKEN       # Telegram Bot API Token
+
+   # AI 服務
+   gh secret set GEMINI_API_KEY            # Google Gemini（圖片生成）
+   gh secret set TAVILY_API_KEY            # Tavily（網路搜尋）
+
+   # App Factory — Repo 管理
+   gh secret set FACTORY_PAT              # aw-apps 組織的 Fine-grained PAT
+   gh secret set FORK_TOKEN               # Classic PAT（需 public_repo 權限，用於 Fork）
+
+   # App Factory — 子 Repo 自動化
+   gh secret set CHILD_COPILOT_TOKEN      # 傳遞至子 Repo 作為 COPILOT_GITHUB_TOKEN
+   gh secret set COPILOT_PAT              # 子 Repo 的 Git 操作與 PR 管理
+   gh secret set NOTIFY_TOKEN             # 子 Repo 回呼通知的 PAT
+   ```
 
 5. **編譯並推送**
    ```bash
@@ -294,14 +372,16 @@ aw-telegram-bot/
 
 ## 開發歷程
 
-| 版本 | 功能 | 主要變更 |
-|------|------|----------|
-| v1 | 基本聊天 | Telegram ↔ Copilot 對話 |
-| v2 | 圖片生成 | Nanobanana + Gemini 整合 |
-| v3 | 研究模式 | Tavily 搜尋 + web-fetch |
-| v4 | 影片下載 | yt-dlp 影片下載 |
-| v5 | App Factory | 端到端 Repo 建立 + 自動化開發 |
-| v6 | 智慧規劃 | Fork 支援、結構化 Issue、Playwright 測試、`/issue` 指令 |
+> 完整系列文章：[aw-telegram-bot 系列目錄](https://yazelin.github.io/2026/03/04/aw-telegram-bot-series-index/)
+
+| 版本 | 功能 | 主要變更 | Blog |
+|------|------|----------|------|
+| v1 | 基本聊天 | Telegram ↔ Copilot 對話 | [踩了 6 個坑才走通](https://yazelin.github.io/2026/03/03/aw-telegram-bot-v1-basic-chatbot/) |
+| v2 | 圖片生成 | Nanobanana + Gemini 整合 | [踩了 Docker container 的坑](https://yazelin.github.io/2026/03/03/aw-telegram-bot-v2-image-generation/) |
+| v3 | 研究模式 | Tavily 搜尋 + web-fetch | [踩了 concurrency 的坑](https://yazelin.github.io/2026/03/03/aw-telegram-bot-v3-research-mode/) |
+| v4 | 影片下載 | yt-dlp 影片下載 | [影片下載 + 使用者白名單](https://yazelin.github.io/2026/03/04/aw-telegram-bot-v4-video-download/) |
+| v5 | App Factory | 端到端 Repo 建立 + 自動化開發 | [用 Telegram 指令讓 AI 自動建網站](https://yazelin.github.io/2026/03/04/aw-telegram-bot-v5-app-factory/) |
+| v6 | 智慧規劃 | Fork 支援、結構化 Issue、Playwright 測試、`/issue` 指令 | [省一半 Premium Request](https://yazelin.github.io/2026/03/04/aw-telegram-bot-v6-smart-planning/) |
 
 ## 授權
 
