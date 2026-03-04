@@ -659,12 +659,14 @@ Call safe-inputs in this order:
 - Repo names should be descriptive and short (2-4 words, hyphenated)
 - README should be in the user's language (Traditional Chinese)
 - AGENTS.md should be in English (Copilot CLI works better in English)
-- Issues should be in English with clear acceptance criteria
-- Each issue should be independently implementable when possible
-- **Each issue must be small enough for Copilot CLI to complete in under 45 minutes**
-- Prefer more smaller issues (5-8) over fewer large ones (2-3)
-- First issue should set up the project skeleton
-- Last issue should handle deployment (if applicable)
+- Issues should be in English
+- Target 2-5 issues based on dependency analysis (not 5-8)
+- Merge tightly-coupled features into one issue
+- Keep independent features as separate issues
+- Each issue must represent a verifiable functional module
+- Each issue body must include: Objective, Context, Approach, Files, Acceptance Criteria, Validation
+- Each issue must be completable by Copilot CLI within the 55-minute timeout
+- Sequence: foundation + core first → features → polish + deploy last
 
 ## Build trigger workflow
 
