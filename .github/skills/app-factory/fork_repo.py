@@ -45,6 +45,12 @@ def main():
             break
         time.sleep(5)
 
+    # Enable issues (GitHub forks have issues disabled by default)
+    subprocess.run(
+        ["gh", "api", f"repos/{repo}", "-X", "PATCH", "-f", "has_issues=true"],
+        capture_output=True, text=True
+    )
+
     print(json.dumps({"ok": True, "repo": repo, "url": f"https://github.com/{repo}"}))
 
 if __name__ == "__main__":
