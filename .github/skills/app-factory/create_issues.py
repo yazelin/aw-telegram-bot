@@ -19,12 +19,25 @@ def main():
     issues = json.loads(sys.argv[2])
     numbers = []
 
+    # Ensure required labels exist (ignore errors if already exist)
+    for label, desc, color in [
+        ("copilot-task", "Managed by Copilot agent", "0E8A16"),
+        ("agent-stuck", "Agent could not complete this issue", "D93F0B"),
+        ("needs-human-review", "Needs human intervention", "FBCA04"),
+    ]:
+        subprocess.run(
+            ["gh", "label", "create", label,
+             "--repo", repo, "--description", desc, "--color", color],
+            capture_output=True, text=True
+        )
+
     for issue in issues:
         result = subprocess.run(
             ["gh", "issue", "create",
              "--repo", repo,
              "--title", issue["title"],
-             "--body", issue["body"]],
+             "--body", issue["body"],
+             "--label", "copilot-task"],
             capture_output=True, text=True
         )
         if result.returncode != 0:

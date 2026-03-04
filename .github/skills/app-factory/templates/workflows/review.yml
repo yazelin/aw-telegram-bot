@@ -3,6 +3,7 @@ name: Code Review
 on:
   pull_request:
     types: [opened, synchronize]
+    branches: [main]
 
 concurrency:
   group: copilot-review-${{ github.event.pull_request.number }}
@@ -12,19 +13,12 @@ jobs:
   review:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    if: startsWith(github.head_ref, 'issue-')
     steps:
       - name: Checkout
         uses: actions/checkout@v5
         with:
           token: ${{ secrets.COPILOT_PAT }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-
-      - name: Install Copilot CLI
-        run: npm install -g @github/copilot
 
       - name: Count previous reviews
         id: count
@@ -37,7 +31,7 @@ jobs:
           echo "Review count for PR #${PR_NUM}: ${COUNT}"
 
       - name: Bail if too many reviews
-        if: ${{ steps.count.outputs.review_count >= 3 }}
+        if: steps.count.outputs.review_count >= 3
         env:
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
           NOTIFY_REPO: PLACEHOLDER_NOTIFY_REPO
@@ -51,11 +45,20 @@ jobs:
           gh workflow run notify.yml --repo ${NOTIFY_REPO} \
             -f chat_id="${NOTIFY_CHAT_ID}" \
             -f text="⚠️ ${{ github.repository }} PR #${PR_NUM} failed review 3 times, needs human review"
-          gh workflow run implement.yml
           echo "Bailed: too many reviews"
 
+      - name: Setup Node.js
+        if: steps.count.outputs.review_count < 3
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Copilot CLI
+        if: steps.count.outputs.review_count < 3
+        run: npm install -g @github/copilot
+
       - name: Review
-        if: ${{ steps.count.outputs.review_count < 3 }}
+        if: steps.count.outputs.review_count < 3
         env:
           COPILOT_GITHUB_TOKEN: ${{ secrets.COPILOT_GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.COPILOT_PAT }}
